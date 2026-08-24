@@ -21,21 +21,21 @@ adding a current capability this small integration layer needs.
 An eventual child repository is declared as a normal remote input, for example:
 
 ```nix
-inputs.foo.url = "github:pbert5/foo";
+inputs.ashzsh.url = "github:pbert5/AshZsh";
 ```
 
 Normal operation stays remote and locked. During development, a checkout can be
 substituted without editing the committed flake or lock file:
 
 ```sh
-git submodule update --init packages/foo
-nix develop --override-input foo path:./packages/foo
-nix build .#some-output --override-input foo path:./packages/foo
-nix flake check --override-input foo path:./packages/foo
-nix eval .#some-output --override-input foo path:./packages/foo
+git submodule update --init packages/AshZsh
+nix develop --override-input ashzsh path:./packages/AshZsh
+nix build .#some-output --override-input ashzsh path:./packages/AshZsh
+nix flake check --override-input ashzsh path:./packages/AshZsh
+nix eval .#some-output --override-input ashzsh path:./packages/AshZsh
 ```
 
-`packages/foo` is a development checkout, not a default flake input. A Git
+`packages/AshZsh` is a development checkout, not a default flake input. A Git
 submodule records which child commit the parent workspace expects; a Nix input
 records the dependency graph and its lock state; `--override-input` connects a
 local checkout to that graph for one command. These mechanisms are related but

@@ -49,6 +49,9 @@ shells, store and profile operations, debugging, NixOS builds/VMs/tests/
 containers, and local child-flake overrides. Use `navi --print` to review a
 command before executing it.
 
+For local component development with Git submodules and `--override-input`, see
+[DEV.md](DEV.md).
+
 ## Layout
 
 ```text
