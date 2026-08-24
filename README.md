@@ -72,10 +72,11 @@ Only directories with current files are committed; `packages/`, `src/`, and
 ## External component development
 
 Nix Arbor declares real child flakes as remote inputs. AshZsh is the first
-example:
+examples:
 
 ```nix
 inputs.ashzsh.url = "github:pbert5/AshZsh";
+inputs.ashes-desktop-apps.url = "github:pbert5/AshDesktopApps";
 ```
 
 The remote input is the reproducible default. A local Git checkout is kept
@@ -143,7 +144,7 @@ and devShell outputs provide convenient imperative use:
 
 ```sh
 nix flake show github:pbert5/AshesTools
-nix profile install github:pbert5/AshesTools#nix-dev
+nix profile add github:pbert5/AshesTools#nix-dev
 nix shell github:pbert5/AshesTools#network
 nix develop github:pbert5/AshesTools#nix-dev
 ```
@@ -151,6 +152,21 @@ nix develop github:pbert5/AshesTools#nix-dev
 The Arbor dev shell uses `inputs.ashes-tools.lib.sets.nix-workstation pkgs` for
 reusable package selection; AshZsh activation and Arbor-specific Navi behavior
 remain local to Arbor.
+
+Ash Desktop Apps is the desktop/GUI counterpart. Its canonical sets are
+consumed independently, for example:
+
+```sh
+nix profile add github:pbert5/AshDesktopApps#desktop-coding
+nix shell github:pbert5/AshDesktopApps#desktop-core
+```
+
+Local Nix Arbor development uses the same temporary substitution convention:
+
+```sh
+nix flake check --override-input ashes-desktop-apps path:./packages/AshDesktopApps
+```
+
 ## Agent-first development
 
 Use one branch and one sibling worktree per agent task. The helper, role briefs,
@@ -160,7 +176,7 @@ in [docs/agent-workflows.md](docs/agent-workflows.md). Run
 reference repositories. Use recursive mode inside a child only when that child
 has a valid `.gitmodules` file.
 
-`references/flake-devbox` is a legacy/reference submodule for inspection. It is
+`refference/old_massive_flake/flake-devbox` is a legacy/reference submodule for inspection. It is
 not a Nix Arbor flake input and should not be casually modified or ported
 wholesale. Active independently versioned components belong under `packages/`
 and retain their own repository workflows.

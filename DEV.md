@@ -4,7 +4,8 @@ This runbook covers developing Nix Arbor together with checked-out component
 flakes. The normal flake remains remote and locked; local component checkouts
 are temporary development substitutions.
 
-The checked-out components are `packages/AshZsh` and `packages/AshesTools`.
+The checked-out components are `packages/AshZsh`, `packages/AshesTools`, and
+`packages/AshDesktopApps`.
 Each is both a Git submodule (editable checkout plus parent commit pointer) and
 a remote flake input (the normal reproducible dependency). `--override-input`
 temporarily splices a local checkout into that graph.
@@ -99,7 +100,8 @@ nix run .#local -- metadata
 The helper only adds an override when `packages/AshZsh/flake.nix` exists. If
 the checkout is absent, it runs the native command without an override.
 
-The helper now applies available overrides for both `ashzsh` and `ashes-tools`.
+The helper now applies available overrides for `ashzsh`, `ashes-tools`, and
+`ashes-desktop-apps`.
 The direct two-level workflow is:
 
 ```bash
@@ -107,6 +109,13 @@ cd packages/AshesTools
 nix flake check --override-input awesome-nix-sets path:./packages/AwesomeNixSets
 cd ../..
 nix flake check --override-input ashes-tools path:./packages/AshesTools
+```
+
+For Ash Desktop Apps, the native local form is:
+
+```bash
+nix flake check --override-input ashes-desktop-apps path:./packages/AshDesktopApps
+nix develop --override-input ashes-desktop-apps path:./packages/AshDesktopApps
 ```
 
 Check AwesomeNixSets at its own boundary first when changing the nested
@@ -198,10 +207,12 @@ input must also work.
 
 ## Helper limitations
 
-The helper currently knows one mapping:
+The helper maintains the component mapping in `modules/apps.nix`:
 
 ```text
-ashzsh -> packages/AshZsh
+ashzsh             -> packages/AshZsh
+ashes-tools        -> packages/AshesTools
+ashes-desktop-apps -> packages/AshDesktopApps
 ```
 
 It is intentionally a thin wrapper around native Nix. It does not initialize,

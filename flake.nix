@@ -12,6 +12,8 @@
     ashzsh.inputs.home-manager.follows = "home-manager";
     ashes-tools.url = "github:pbert5/AshesTools";
     ashes-tools.inputs.nixpkgs.follows = "nixpkgs";
+    ashes-desktop-apps.url = "github:pbert5/AshDesktopApps";
+    ashes-desktop-apps.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

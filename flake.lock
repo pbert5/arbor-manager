@@ -1,9 +1,31 @@
 {
   "nodes": {
+    "ashes-desktop-apps": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-unstable": "nixpkgs-unstable"
+      },
+      "locked": {
+        "lastModified": 1787544689,
+        "narHash": "sha256-DYd/3YSTTryFSidkGynaVgJ8oqLP4zJRSuO8EvcFMYs=",
+        "owner": "pbert5",
+        "repo": "AshDesktopApps",
+        "rev": "881835d023e4d56a5219c8208eb6b444b891fa9e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "AshDesktopApps",
+        "type": "github"
+      }
+    },
     "ashes-tools": {
       "inputs": {
         "awesome-nix-sets": "awesome-nix-sets",
-        "flake-parts": "flake-parts_2",
+        "flake-parts": "flake-parts_3",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -64,7 +86,7 @@
     "awesome-nix-sets": {
       "inputs": {
         "awesome-nix": "awesome-nix",
-        "flake-parts": "flake-parts",
+        "flake-parts": "flake-parts_2",
         "nixpkgs": [
           "ashes-tools",
           "nixpkgs"
@@ -87,8 +109,7 @@
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
-          "ashes-tools",
-          "awesome-nix-sets",
+          "ashes-desktop-apps",
           "nixpkgs"
         ]
       },
@@ -110,6 +131,7 @@
       "inputs": {
         "nixpkgs-lib": [
           "ashes-tools",
+          "awesome-nix-sets",
           "nixpkgs"
         ]
       },
@@ -128,6 +150,27 @@
       }
     },
     "flake-parts_3": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "ashes-tools",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785627969,
+        "narHash": "sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "427bf4bd9435fdf21321c8cc628c24efc14c0f7a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_4": {
       "inputs": {
         "nixpkgs-lib": [
           "nixpkgs"
@@ -183,11 +226,28 @@
         "type": "github"
       }
     },
+    "nixpkgs-unstable": {
+      "locked": {
+        "lastModified": 1787360063,
+        "narHash": "sha256-dt4WdcvsA8/RCe+VZZwqU0X+XMM3wBbGCWA0/sFWzGo=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2c423e03bbafcff28bfadc6781a4a8257f205cb5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "ashes-desktop-apps": "ashes-desktop-apps",
         "ashes-tools": "ashes-tools",
         "ashzsh": "ashzsh",
-        "flake-parts": "flake-parts_3",
+        "flake-parts": "flake-parts_4",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }
