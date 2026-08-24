@@ -9,11 +9,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787544229,
-        "narHash": "sha256-gfsDEPFPuz/MShZ17oPU0lWQKQPf+hMjMEZbdebB0Nw=",
+        "lastModified": 1787544301,
+        "narHash": "sha256-c74zlAamMBGk3steCktOo84apxEUz/j7Oi2cz+3esNk=",
         "owner": "pbert5",
         "repo": "AshesTools",
-        "rev": "221ee71718ae7f8700e9ff00dfef77d86a05f486",
+        "rev": "ceb12a1fa1f215ae486390bd554c03d0fe1d6381",
         "type": "github"
       },
       "original": {
@@ -71,11 +71,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787544195,
-        "narHash": "sha256-OANcy1ago92HKLZn7DX6dzK+6rQhDA1RV3dsbz4QpM4=",
+        "lastModified": 1787544282,
+        "narHash": "sha256-McfPq5p45LdBXtJWKkUEizQLAdoF63XMOxGCwjiMwXw=",
         "owner": "pbert5",
         "repo": "AwesomeNixSets",
-        "rev": "eb3208d6b8989a476cef5ff45b3d43b12a8a7682",
+        "rev": "becede51bc126eba13eedbe7685a636277e106fa",
         "type": "github"
       },
       "original": {
