@@ -201,5 +201,40 @@ not a Nix Arbor flake input and should not be casually modified or ported
 wholesale. Active independently versioned components belong under `packages/`
 and retain their own repository workflows.
 
-This phase deliberately excludes hosts, hardware, Home Manager, deployments,
-secrets, cluster topology, applications, and child flakes.
+## Machine inventory
+
+Static machine facts live under `config/machines/`. Each directory is named
+after its machine and contains a concise `default.nix` descriptor. Optional
+`hardware-configuration.nix` and `configuration.nix` files are automatically
+included by Arbor Manager.
+
+Use the ordinary NixOS outputs with `nix flake show`, or evaluate and build:
+
+```sh
+nix eval .#nixosConfigurations.desktoptoodle.config.networking.hostName
+nix build .#nixosConfigurations.desktoptoodle.config.system.build.toplevel
+nix build .#nixosConfigurations.r640-0.config.system.build.toplevel
+```
+
+Deployment remains standard NixOS tooling; switching is an operator action:
+
+```sh
+nixos-rebuild build --flake .#desktoptoodle
+nixos-rebuild switch --flake .#desktoptoodle --target-host <host>
+```
+
+Add a machine by creating its directory, descriptor, and normal generated
+hardware module. On the target, `nixos-generate-config --show-hardware-config`
+provides the hardware module; review and save it as
+`config/machines/<name>/hardware-configuration.nix`.
+
+Committed inventory contains stable Git/Nix build facts: architecture,
+hostname, profile, boot/storage facts, and static module choices. Future live
+registry facts such as health, presence, membership, and changing topology
+will enter through another machine source rather than being committed here.
+
+The initial profiles are `desktop` and `server`. desktoptoodle consumes
+TilingDesktop, AshZsh, and Ash Desktop Apps; r640-0 uses the conservative SSH
+server profile. Legacy cluster state, dynamic enrollment, large media/storage
+services, NVIDIA tuning, and user-specific application lists are intentionally
+omitted.

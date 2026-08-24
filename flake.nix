@@ -19,6 +19,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+    arbor-manager.url = "path:./packages/arbor-manager";
   };
 
   outputs =
@@ -34,6 +35,7 @@
         ./modules/checks.nix
         ./modules/apps.nix
         ./modules/components.nix
+        ./config
       ];
     };
 }

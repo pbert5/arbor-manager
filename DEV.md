@@ -214,6 +214,17 @@ ashzsh             -> packages/AshZsh
 ashes-tools        -> packages/AshesTools
 ashes-desktop-apps -> packages/AshDesktopApps
 tilingDesktop       -> packages/tiling-desktop
+arbor-manager       -> packages/arbor-manager
+```
+
+Arbor Manager is the standalone assembly flake under `packages/arbor-manager`.
+Its public API is `lib.mkMachines`; Nix Arbor passes it `config/machines` and
+profile modules, then exports the returned values as `nixosConfigurations`.
+Validate the local checkout explicitly or through the helper:
+
+```sh
+nix flake check --override-input arbor-manager path:./packages/arbor-manager
+nix run .#local -- check
 ```
 
 It is intentionally a thin wrapper around native Nix. It does not initialize,
