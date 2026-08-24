@@ -18,6 +18,14 @@ nix copy --to ssh://host /nix/store/<path>
 # List profile generations; a profile is a versioned user-facing pointer
 nix profile history
 
+# Install and inspect an Ashes Tools bundle in the current profile
+nix profile install github:pbert5/AshesTools#nix-dev
+nix profile list
+nix profile upgrade
+nix profile remove <profile-element>
+nix profile history
+nix profile rollback
+
 # Roll back the current user's profile to its previous generation
 nix profile rollback
 

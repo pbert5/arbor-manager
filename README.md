@@ -132,5 +132,22 @@ REPL, metadata, and output inspection; the native Nix command remains visible.
 The repository's formatter is `nixfmt` driven through `nixfmt-tree`, and
 `nix flake check` runs formatting, statix, and deadnix checks immediately.
 
-This phase deliberately excludes hosts, hardware, Home Manager, deployments,
-secrets, cluster topology, applications, and child flakes.
+This phase deliberately excludes hosts, hardware, deployments, secrets, cluster
+topology, and applications; reusable child flakes live in their own repositories.
+
+## Ashes Tools package sets
+
+Ashes Tools is a separately versioned package-set library consumed remotely by
+this flake. Its `lib.sets` functions accept Arbor's `pkgs`, while its package
+and devShell outputs provide convenient imperative use:
+
+```sh
+nix flake show github:pbert5/AshesTools
+nix profile install github:pbert5/AshesTools#nix-dev
+nix shell github:pbert5/AshesTools#network
+nix develop github:pbert5/AshesTools#nix-dev
+```
+
+The Arbor dev shell uses `inputs.ashes-tools.lib.sets.nix-workstation pkgs` for
+reusable package selection; AshZsh activation and Arbor-specific Navi behavior
+remain local to Arbor.

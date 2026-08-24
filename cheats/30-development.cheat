@@ -24,6 +24,15 @@ nix run .#local -- develop
 nix build .#<output> --override-input ashzsh path:./packages/AshZsh
 nix eval .#<output> --override-input ashzsh path:./packages/AshZsh
 
+# Develop the nested Awesome Nix Sets checkout through Ashes Tools
+cd packages/AshesTools
+nix flake check --override-input awesome-nix-sets path:./packages/AwesomeNixSets
+cd ../..
+
+# Apply both local child overrides through the Arbor helper
+nix run .#local -- overrides
+nix run .#local -- check
+
 # Load the default shell automatically after allowing .envrc
 direnv allow
 

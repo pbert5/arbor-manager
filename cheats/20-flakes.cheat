@@ -32,3 +32,18 @@ nix run .#help
 
 # See the URL syntax Nix accepts for a flake input
 nix flake prefetch github:NixOS/nixpkgs/nixos-unstable
+
+# Discover Ashes Tools sets and outputs
+nix flake show github:pbert5/AshesTools
+nix run github:pbert5/AshesTools#list-sets
+nix run github:pbert5/AshesTools#describe-set -- nix-dev
+
+# Use a reusable set in each consumption style
+nix profile install github:pbert5/AshesTools#nix-dev
+nix shell github:pbert5/AshesTools#network
+nix develop github:pbert5/AshesTools#nix-dev
+nix build github:pbert5/AshesTools#nix-dev
+
+# Test Arbor with local child flakes instead of remote inputs
+nix flake check --override-input ashes-tools path:./packages/AshesTools
+nix develop --override-input ashes-tools path:./packages/AshesTools

@@ -10,6 +10,8 @@
     ashzsh.url = "github:pbert5/AshZsh";
     ashzsh.inputs.nixpkgs.follows = "nixpkgs";
     ashzsh.inputs.home-manager.follows = "home-manager";
+    ashes-tools.url = "github:pbert5/AshesTools";
+    ashes-tools.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

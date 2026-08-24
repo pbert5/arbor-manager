@@ -1,5 +1,27 @@
 {
   "nodes": {
+    "ashes-tools": {
+      "inputs": {
+        "awesome-nix-sets": "awesome-nix-sets",
+        "flake-parts": "flake-parts_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787544128,
+        "narHash": "sha256-kwehyst865xeVmpIipr4Wk7hqychuusb6mAuipSTs7Y=",
+        "owner": "pbert5",
+        "repo": "AshesTools",
+        "rev": "897438d177b76c0bf894a0a11b00f0c7fbb5151d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "AshesTools",
+        "type": "github"
+      }
+    },
     "ashzsh": {
       "inputs": {
         "home-manager": [
@@ -23,7 +45,89 @@
         "type": "github"
       }
     },
+    "awesome-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784827840,
+        "narHash": "sha256-bDLAdMiqf/VsWgZ/Nq3+8sIc1mI5d1nIvbUTIAhEelk=",
+        "owner": "nix-community",
+        "repo": "awesome-nix",
+        "rev": "ecbb552376aef2bcf1614c0879dcd4268f59da6b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "awesome-nix",
+        "type": "github"
+      }
+    },
+    "awesome-nix-sets": {
+      "inputs": {
+        "awesome-nix": "awesome-nix",
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "ashes-tools",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787543817,
+        "narHash": "sha256-9WY0hGT2lxRfoBhZH/2ZUEROW0QSMONzu7PzALZ8FAM=",
+        "owner": "pbert5",
+        "repo": "AwesomeNixSets",
+        "rev": "6f06c9636d5949e2b7b9a6a6928f4f9047196413",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "AwesomeNixSets",
+        "type": "github"
+      }
+    },
     "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "ashes-tools",
+          "awesome-nix-sets",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785627969,
+        "narHash": "sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "427bf4bd9435fdf21321c8cc628c24efc14c0f7a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_2": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "ashes-tools",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785627969,
+        "narHash": "sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "427bf4bd9435fdf21321c8cc628c24efc14c0f7a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_3": {
       "inputs": {
         "nixpkgs-lib": [
           "nixpkgs"
@@ -81,8 +185,9 @@
     },
     "root": {
       "inputs": {
+        "ashes-tools": "ashes-tools",
         "ashzsh": "ashzsh",
-        "flake-parts": "flake-parts",
+        "flake-parts": "flake-parts_3",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }

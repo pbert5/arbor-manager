@@ -18,37 +18,13 @@
           }
         ];
       };
-      tools = with pkgs; [
-        nix
-        git
-        gh
-        jq
-        yq
-        ripgrep
-        fd
-        fzf
-        just
-        direnv
-        nix-direnv
-        navi
-        yazi
-        nh
-        nix-output-monitor
-        nix-tree
-        nix-diff
-        nix-index
-        nil
-        statix
-        deadnix
-        nixfmt
-      ];
     in
     {
       formatter = pkgs.nixfmt-tree;
 
       devShells.default = pkgs.mkShell {
         name = "nix-arbor";
-        packages = tools;
+        packages = inputs.ashes-tools.lib.sets.nix-workstation pkgs;
 
         shellHook = ''
           export HOME="/tmp/nix-arbor-ashzsh"

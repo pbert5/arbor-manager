@@ -37,27 +37,40 @@ _: {
 
           # Keep the input-to-checkout mapping in this one small, declarative
           # location. Add future checked-out components beside AshZsh.
-          component_input="ashzsh"
-          component_local_path="packages/AshZsh"
-          component_remote="github:pbert5/AshZsh"
-          component_checkout="$repository_root/$component_local_path"
           declare -a overrides=()
           collect_overrides() {
-            if [[ -f "$component_checkout/flake.nix" ]]; then
-              overrides+=(--override-input "$component_input" "path:$component_checkout")
-            fi
+            local index component_input component_local_path component_checkout
+            local -a component_inputs=(ashzsh ashes-tools)
+            local -a component_paths=(packages/AshZsh packages/AshesTools)
+            for index in "''${!component_inputs[@]}"; do
+              component_input="''${component_inputs[$index]}"
+              component_local_path="''${component_paths[$index]}"
+              component_checkout="$repository_root/$component_local_path"
+              if [[ -f "$component_checkout/flake.nix" ]]; then
+                overrides+=(--override-input "$component_input" "path:$component_checkout")
+              fi
+            done
           }
 
                     print_overrides() {
             printf '%s\n' "Local flake overrides:"
-            printf '\n%s\n' "$component_input"
-            printf '  remote input: %s\n' "$component_remote"
-            printf '  local path:   ./%s\n' "$component_local_path"
-            if [[ -f "$component_checkout/flake.nix" ]]; then
-                        printf '  status:       active\n'
-                      else
-                        printf '  status:       unavailable (checkout not initialized)\n'
-                      fi
+            local index component_input component_local_path component_checkout
+            local -a component_inputs=(ashzsh ashes-tools)
+            local -a component_paths=(packages/AshZsh packages/AshesTools)
+            local -a component_remotes=(github:pbert5/AshZsh github:pbert5/AshesTools)
+            for index in "''${!component_inputs[@]}"; do
+              component_input="''${component_inputs[$index]}"
+              component_local_path="''${component_paths[$index]}"
+              component_checkout="$repository_root/$component_local_path"
+              printf '\n%s\n' "$component_input"
+              printf '  remote input: %s\n' "''${component_remotes[$index]}"
+              printf '  local path:   ./%s\n' "$component_local_path"
+              if [[ -f "$component_checkout/flake.nix" ]]; then
+                printf '  status:       active\n'
+              else
+                printf '  status:       unavailable (checkout not initialized)\n'
+              fi
+            done
                     }
 
                     case "$operation" in
