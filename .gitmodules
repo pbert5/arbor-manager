@@ -1,0 +1,3 @@
+[submodule "packages/AshZsh"]
+	path = packages/AshZsh
+	url = https://github.com/pbert5/AshZsh.git
