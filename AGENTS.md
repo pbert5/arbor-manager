@@ -38,9 +38,22 @@ belong in independent flakes and repositories.
 - A handoff names the branch and worktree, commit SHA(s), summary, changed
   files, validation, known issues, and review readiness. See
   `docs/agent-workflows.md`.
-- Delegate isolated search, documentation, testing, or review work to a
-  focused subagent. Reserve architectural decisions and integration for the
-  owning agent.
+
+## Subagent execution
+
+- For substantial tasks, the owning agent constructs a dependency graph, fans
+  out independent ready work to focused subagents, retains dependent work in a
+  waiting queue, and dispatches it as prerequisites complete.
+- Keep useful bounded work flowing when ready; continuously synthesize findings
+  and retain architecture, integration, and final decisions in the owning
+  session. Use the repository roles deliberately rather than spawning generic
+  clones.
+- Read-only research, testing, and review agents may share repository
+  visibility only when their commands are non-mutating. Give tests or tools
+  that may change checkout state, caches, submodules, or generated files an
+  isolated worktree. Every concurrent mutable implementation task gets its own
+  `agent/<agent-or-role>/<task-slug>` branch and worktree; never let mutable
+  agents edit the same checkout concurrently.
 
 Nix teaching material belongs in `cheats/` and `docs/`, not in this durable
 repository policy.
