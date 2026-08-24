@@ -10,3 +10,7 @@
 [submodule "packages/AshDesktopApps"]
 	path = packages/AshDesktopApps
 	url = https://github.com/pbert5/AshDesktopApps.git
+[submodule "packages/tiling-desktop"]
+	path = packages/tiling-desktop
+	url = https://github.com/pbert5/TilingDesktop.git
+	branch = main

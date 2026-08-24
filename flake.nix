@@ -14,6 +14,11 @@
     ashes-tools.inputs.nixpkgs.follows = "nixpkgs";
     ashes-desktop-apps.url = "github:pbert5/AshDesktopApps";
     ashes-desktop-apps.inputs.nixpkgs.follows = "nixpkgs";
+    tilingDesktop = {
+      url = "github:pbert5/TilingDesktop";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   outputs =
