@@ -1,0 +1,31 @@
+% nix, development
+
+# Enter this repository's reproducible development shell
+nix develop
+
+# Run one command inside the dev shell without opening an interactive shell
+nix develop --command bash -c 'command -v nixfmt && command -v navi'
+
+# Develop a future remote child flake from a local checkout
+nix develop --override-input foo path:./packages/foo
+
+# Build using that local child-flake override; the lock file is not changed
+nix build .#<output> --override-input foo path:./packages/foo
+
+# Check composition against a local child flake
+nix flake check --override-input foo path:./packages/foo
+
+# Evaluate an output against a local child flake
+nix eval .#<output> --override-input foo path:./packages/foo
+
+# Load the default shell automatically after allowing .envrc
+direnv allow
+
+# See whether direnv has loaded the current environment
+direnv status
+
+# Run the project's thin command discoverability layer
+just help
+
+# Show all variables and snippets for the repository
+navi --path "$PWD/cheats"

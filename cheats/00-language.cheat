@@ -1,0 +1,16 @@
+% nix, language
+
+# Evaluate a small expression without a flake
+nix eval --expr '1 + 2'
+
+# Evaluate an expression and show its type/value clearly
+nix eval --impure --expr 'builtins.currentSystem'
+
+# Open an interactive evaluator; useful for exploring values and attributes
+nix repl
+
+# Print an evaluation trace while debugging a failing expression
+nix eval --show-trace --expr 'builtins.trace "checkpoint" 42'
+
+# Allow machine-local values only when you understand the reproducibility trade-off
+nix eval --impure --expr 'builtins.getEnv "PWD"'

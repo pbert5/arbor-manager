@@ -1,0 +1,38 @@
+% nix, nixos
+
+# Build a NixOS system without activating it
+nixos-rebuild build --flake .#<host>
+
+# Activate a configuration now and make it the boot default
+sudo nixos-rebuild switch --flake .#<host>
+
+# Build and activate only for the next boot
+sudo nixos-rebuild boot --flake .#<host>
+
+# Evaluate a host's complete system closure directly
+nix build .#nixosConfigurations.<host>.config.system.build.toplevel
+
+# Build a QEMU VM runner for a host without changing the running system
+nixos-rebuild build-vm --flake .#<host>
+./result/bin/run-*-vm
+
+# Build the underlying VM derivation directly
+nix build .#nixosConfigurations.<host>.config.system.build.vm
+
+# Open nixpkgs in a REPL before defining a modern NixOS test derivation
+nix repl '<nixpkgs>'
+
+# Build a named flake check containing a NixOS test
+nix build .#checks.x86_64-linux.<test>
+
+# Show the current system generation
+readlink -f /run/current-system
+
+# Inspect an option without activating anything
+nixos-option services.<service>.enable
+
+# Run an interactive test driver after a test build
+./result/bin/nixos-test-driver
+
+# Create and enter an imperative NixOS container (host-managed, not OCI)
+sudo nixos-container create <name> && sudo nixos-container start <name>

@@ -1,0 +1,34 @@
+% nix, store
+
+# List the runtime closure and sizes of an already-built target
+nix path-info --recursive --size --closure-size --human-readable /run/current-system
+
+# Explain why one store path depends on another
+nix why-depends /run/current-system /nix/store/<suspect>
+
+# Print all paths reachable from a store path
+nix-store --query --requisites /run/current-system
+
+# Show an ASCII dependency tree
+nix-store --query --tree /run/current-system
+
+# Copy a store path to another Nix store or substituter
+nix copy --to ssh://host /nix/store/<path>
+
+# List profile generations; a profile is a versioned user-facing pointer
+nix profile history
+
+# Roll back the current user's profile to its previous generation
+nix profile rollback
+
+# Delete old generations from the current user's profile
+nix profile wipe-history
+
+# Ask Nix to remove unreferenced store paths (review roots first)
+nix-collect-garbage --delete-older-than 30d
+
+# Inspect store roots that keep paths alive
+nix-store --gc --print-roots
+
+# Check store integrity; repair is deliberately omitted from the default cheat
+sudo nix-store --verify --check-contents

@@ -1,0 +1,28 @@
+% nix, cli
+
+# Search packages by name or description
+nix search nixpkgs ripgrep
+
+# Temporarily put a package's executables on PATH; this is not a development shell
+nix shell nixpkgs#jq
+
+# Run one package without installing it into a profile
+nix run nixpkgs#hello
+
+# Build an installable and leave its result symlink in the current directory
+nix build nixpkgs#hello
+
+# Inspect a package's resolved store path without building it when absent
+nix path-info nixpkgs#hello
+
+# Show the derivation that describes how a package is built
+nix derivation show nixpkgs#hello
+
+# Show the build log for a store path or installable
+nix log nixpkgs#hello
+
+# Compare two derivations or store paths and explain differences
+nix-diff /nix/store/<old>.drv /nix/store/<new>.drv
+
+# Search the nix-index database for the package that provides a command
+nix-index

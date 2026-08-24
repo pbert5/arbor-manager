@@ -1,0 +1,34 @@
+% nix, flakes
+
+# Show the outputs a flake exposes; use this first when learning a new flake
+nix flake show
+
+# Show locked and original inputs, revisions, and follows relationships
+nix flake metadata
+
+# Check that outputs evaluate and declared checks pass
+nix flake check
+
+# Format all Nix files using this project's single standard formatter
+nix fmt
+
+# Update every unlocked input and rewrite the lock file
+nix flake update
+
+# Update one input while leaving other locks unchanged
+nix flake lock --update-input nixpkgs
+
+# Inspect the committed lock graph as JSON
+nix flake metadata --json | jq
+
+# Build a package output; build does not activate or install it
+nix build .#<package>
+
+# Enter the declared development environment, not merely a package PATH
+nix develop
+
+# Use the repository's Navi app without first entering the shell
+nix run .#help
+
+# See the URL syntax Nix accepts for a flake input
+nix flake prefetch github:NixOS/nixpkgs/nixos-unstable

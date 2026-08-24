@@ -1,0 +1,28 @@
+% nix, debugging
+
+# Preserve the full source location for an evaluation error
+nix eval --show-trace .#<output>
+
+# Ask Nix to print build output instead of hiding it behind a progress line
+nix build -L .#<output>
+
+# Inspect the JSON form of a derivation
+nix derivation show .#<output> | jq
+
+# Compare a working and failing derivation
+nix-diff /nix/store/<working>.drv /nix/store/<failing>.drv
+
+# Explore a flake's outputs interactively
+nix repl
+
+# Inspect a dependency graph interactively
+nix-tree /nix/store/<path>
+
+# See all paths that depend on a candidate path before removing it
+nix-store --query --referrers /nix/store/<path>
+
+# Force an explicitly impure evaluation only when local state is intentional
+nix eval --impure --expr 'builtins.currentTime'
+
+# Diagnose a failed NixOS test interactively after building its driverInteractive output
+nix build .#checks.x86_64-linux.<test>.driverInteractive
