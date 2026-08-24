@@ -167,6 +167,26 @@ Local Nix Arbor development uses the same temporary substitution convention:
 nix flake check --override-input ashes-desktop-apps path:./packages/AshDesktopApps
 ```
 
+## Desktop demo VM
+
+The [TilingDesktop](https://github.com/pbert5/TilingDesktop) component includes
+a generic VM for testing the tuigreet, Hyprland, and Niri desktop stack:
+
+```sh
+nix run github:pbert5/TilingDesktop#demo-vm
+```
+
+From a local component checkout:
+
+```sh
+cd packages/tiling-desktop
+nix run .#demo-vm
+```
+
+Log in with user `demo` and password `demo`, then use tuigreet to select
+Hyprland or Niri. See the child component README for build and configuration
+details.
+
 ## Agent-first development
 
 Use one branch and one sibling worktree per agent task. The helper, role briefs,
@@ -176,7 +196,7 @@ in [docs/agent-workflows.md](docs/agent-workflows.md). Run
 reference repositories. Use recursive mode inside a child only when that child
 has a valid `.gitmodules` file.
 
-`refference/old_massive_flake/flake-devbox` is a legacy/reference submodule for inspection. It is
+`references/flake-devbox` is a legacy/reference submodule for inspection. It is
 not a Nix Arbor flake input and should not be casually modified or ported
 wholesale. Active independently versioned components belong under `packages/`
 and retain their own repository workflows.

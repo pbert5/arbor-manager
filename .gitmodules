@@ -2,7 +2,7 @@
 	path = packages/AshZsh
 	url = https://github.com/pbert5/AshZsh.git
 [submodule "flake-devbox"]
-	path = refference/old_massive_flake/flake-devbox
+	path = references/flake-devbox
 	url = https://github.com/pbert5/flake-devbox
 [submodule "packages/AshesTools"]
 	path = packages/AshesTools

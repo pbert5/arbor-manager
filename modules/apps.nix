@@ -40,8 +40,8 @@ _: {
           declare -a overrides=()
           collect_overrides() {
             local index component_input component_local_path component_checkout
-            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps)
-            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps)
+            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps tilingDesktop)
+            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps packages/tiling-desktop)
             for index in "''${!component_inputs[@]}"; do
               component_input="''${component_inputs[$index]}"
               component_local_path="''${component_paths[$index]}"

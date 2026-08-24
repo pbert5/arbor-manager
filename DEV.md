@@ -4,8 +4,8 @@ This runbook covers developing Nix Arbor together with checked-out component
 flakes. The normal flake remains remote and locked; local component checkouts
 are temporary development substitutions.
 
-The checked-out components are `packages/AshZsh`, `packages/AshesTools`, and
-`packages/AshDesktopApps`.
+The checked-out components are `packages/AshZsh`, `packages/AshesTools`,
+`packages/AshDesktopApps`, and `packages/tiling-desktop`.
 Each is both a Git submodule (editable checkout plus parent commit pointer) and
 a remote flake input (the normal reproducible dependency). `--override-input`
 temporarily splices a local checkout into that graph.
@@ -100,8 +100,8 @@ nix run .#local -- metadata
 The helper only adds an override when `packages/AshZsh/flake.nix` exists. If
 the checkout is absent, it runs the native command without an override.
 
-The helper now applies available overrides for `ashzsh`, `ashes-tools`, and
-`ashes-desktop-apps`.
+The helper now applies available overrides for `ashzsh`, `ashes-tools`,
+`ashes-desktop-apps`, and `tilingDesktop`.
 The direct two-level workflow is:
 
 ```bash
@@ -213,6 +213,7 @@ The helper maintains the component mapping in `modules/apps.nix`:
 ashzsh             -> packages/AshZsh
 ashes-tools        -> packages/AshesTools
 ashes-desktop-apps -> packages/AshDesktopApps
+tilingDesktop       -> packages/tiling-desktop
 ```
 
 It is intentionally a thin wrapper around native Nix. It does not initialize,

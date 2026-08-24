@@ -33,7 +33,7 @@
         ./modules/devshell.nix
         ./modules/checks.nix
         ./modules/apps.nix
-        ./modules/ashzsh.nix
+        ./modules/components.nix
       ];
     };
 }

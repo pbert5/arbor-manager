@@ -50,6 +50,34 @@ changed, validation, known issues, and whether it is ready for review. A
 reviewer should inspect `git diff <base>...<branch>` and the branch's checks
 before cherry-picking or merging.
 
+## Completion and merge
+
+For a normal task, a validated agent branch merges itself into its identified
+base branch before reporting completion:
+
+```text
+isolated worktree -> implement -> validate -> commit -> review/check
+    -> merge into intended base -> verify the merged base -> clean up
+```
+
+After the merge, verify `git status`, inspect a recent graph with
+`git log --graph --decorate --oneline`, and rerun the relevant checks against
+the merged base. For Nix Arbor this normally includes `nix flake check` and
+the focused component checks. A successful `git merge` exit code alone is not
+completion.
+
+Do not merge when validation fails, the task is incomplete, conflicts remain,
+another agent is changing the same integration area, review was explicitly
+requested first, production/deployment approval is required, the base is
+unclear, or the merge could discard newer work. In those cases commit a
+handoff and report the reason.
+
+Resolve conflicts semantically: inspect both sides and preserve independent
+entries. Never select whole-file `ours` or `theirs` merely to make a conflict
+disappear. Take extra care with `flake.nix`, `flake.lock`, `.gitmodules`,
+integration modules, `DEV.md`, `AGENTS.md`, `CLAUDE.md`, `Justfile`, and
+`.vscode/tasks.json`.
+
 ## Worktree lifecycle and safe cleanup
 
 ```sh
@@ -61,11 +89,14 @@ before cherry-picking or merging.
 ```
 
 The helper refuses to remove a dirty or unmerged agent branch by default and
-never runs `git reset --hard` or `git clean`. `--force` is available only on an
-explicitly named `remove` command; it removes the worktree and deletes its
-branch, so inspect first and never use it for another agent's branch. Bulk
-cleanup never accepts force. `git worktree list` is the authoritative
-ownership check. `git worktree prune` only removes stale administrative records.
+never runs `git reset --hard` or `git clean`. A clean agent branch whose
+commits are ancestors of the configured base is a candidate for
+`cleanup-merged`: the helper removes its worktree, prunes its metadata, and
+deletes only the merged local branch. It never deletes remote branches.
+Inspect `git worktree list` and `agent-worktree status` first; leave branches
+that are dirty, unmerged, or still needed by another active effort in place.
+`--force` is available only on an explicitly named `remove` command. Bulk
+cleanup never accepts force.
 
 Native commands remain useful:
 
