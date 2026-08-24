@@ -1,0 +1,32 @@
+% git, agent worktrees
+
+# List every checkout and its branch
+git worktree list
+
+# Create one isolated agent branch and checkout
+./scripts/agent-worktree new <task-slug> <agent-name>
+
+# Native equivalent; worktrees live outside the repository
+git worktree add -b agent/<agent>/<task> ../nix-arbor-worktrees/agent-<agent>-<task> HEAD
+
+# Inspect agent checkout status
+./scripts/agent-worktree status
+
+# Remove only a clean, merged agent checkout
+./scripts/agent-worktree remove <task-slug>
+
+# Find merged branches before cleanup
+git branch --merged main
+
+# Remove stale Git worktree metadata; this does not remove live checkouts
+git worktree prune
+
+# Initialize Nix Arbor's direct component/reference submodules
+git submodule update --init
+
+# Initialize a child repository's own nested submodules when it declares them
+git -C packages/<component> submodule update --init --recursive
+
+# Run Codex or Claude in the current dedicated worktree
+codex
+claude

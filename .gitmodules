@@ -7,3 +7,6 @@
 [submodule "packages/AshesTools"]
 	path = packages/AshesTools
 	url = https://github.com/pbert5/AshesTools.git
+[submodule "packages/AshDesktopApps"]
+	path = packages/AshDesktopApps
+	url = https://github.com/pbert5/AshDesktopApps.git

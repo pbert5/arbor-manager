@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Nix: Develop Shell", "type": "shell", "command": "nix develop", "problemMatcher": [] },
+    { "label": "Nix: Flake Check", "type": "shell", "command": "nix flake check", "problemMatcher": [] },
+    { "label": "Nix: Format", "type": "shell", "command": "nix fmt", "problemMatcher": [] },
+    { "label": "Agent: List Worktrees", "type": "shell", "command": "./scripts/agent-worktree list", "problemMatcher": [] },
+    { "label": "Agent: Worktree Status", "type": "shell", "command": "./scripts/agent-worktree status", "problemMatcher": [] },
+    { "label": "Agent: New Worktree", "type": "process", "command": "./scripts/agent-worktree", "args": ["new", "${input:agentTask}", "${input:agentName}"], "problemMatcher": [] },
+    { "label": "Agent: Cleanup Merged Worktrees", "type": "shell", "command": "./scripts/agent-worktree cleanup-merged", "problemMatcher": [] },
+    { "label": "Agent: Prune Worktrees", "type": "shell", "command": "./scripts/agent-worktree prune", "problemMatcher": [] },
+    { "label": "Git: Branch Overview", "type": "shell", "command": "git branch -vv", "problemMatcher": [] },
+    { "label": "Submodules: Update/Initialize", "type": "shell", "command": "git submodule update --init", "problemMatcher": [] }
+  ],
+  "inputs": [
+    { "id": "agentTask", "type": "promptString", "description": "Task slug" },
+    { "id": "agentName", "type": "promptString", "description": "Agent or role name", "default": "agent" }
+  ]
+}

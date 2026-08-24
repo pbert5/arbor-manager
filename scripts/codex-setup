@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Codex Cloud setup script: keep bootstrap deterministic and non-interactive.
+git submodule update --init
+nix develop --command true
