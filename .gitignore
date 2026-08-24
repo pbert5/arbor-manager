@@ -1,0 +1,5 @@
+.worktrees/
+.agent-state/
+.direnv/
+result
+result-*

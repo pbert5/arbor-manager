@@ -1,0 +1,7 @@
+[submodule "packages/AshZsh"]
+	path = packages/AshZsh
+	url = https://github.com/pbert5/AshZsh.git
+
+[submodule "references/flake-devbox"]
+	path = references/flake-devbox
+	url = https://github.com/pbert5/flake-devbox.git
