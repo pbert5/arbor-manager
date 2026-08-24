@@ -9,11 +9,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1787544689,
-        "narHash": "sha256-DYd/3YSTTryFSidkGynaVgJ8oqLP4zJRSuO8EvcFMYs=",
+        "lastModified": 1787544878,
+        "narHash": "sha256-svVzq3bVDWMfz2LwylB2kDJaw5K2omaWg3GlPY8ZvU8=",
         "owner": "pbert5",
         "repo": "AshDesktopApps",
-        "rev": "881835d023e4d56a5219c8208eb6b444b891fa9e",
+        "rev": "3bd2a78e194b0ac6c210db76ff94ed851aa5ad3d",
         "type": "github"
       },
       "original": {
