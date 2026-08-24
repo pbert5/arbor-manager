@@ -41,10 +41,17 @@ _: {
           component_local_path="packages/AshZsh"
           component_remote="github:pbert5/AshZsh"
           component_checkout="$repository_root/$component_local_path"
+          tiling_component_input="tilingDesktop"
+          tiling_component_local_path="packages/tiling-desktop"
+          tiling_component_remote="github:pbert5/TilingDesktop"
+          tiling_component_checkout="$repository_root/$tiling_component_local_path"
           declare -a overrides=()
           collect_overrides() {
             if [[ -f "$component_checkout/flake.nix" ]]; then
               overrides+=(--override-input "$component_input" "path:$component_checkout")
+            fi
+            if [[ -f "$tiling_component_checkout/flake.nix" ]]; then
+              overrides+=(--override-input "$tiling_component_input" "path:$tiling_component_checkout")
             fi
           }
 
@@ -58,6 +65,14 @@ _: {
                       else
                         printf '  status:       unavailable (checkout not initialized)\n'
                       fi
+            printf '\n%s\n' "$tiling_component_input"
+            printf '  remote input: %s\n' "$tiling_component_remote"
+            printf '  local path:   ./%s\n' "$tiling_component_local_path"
+            if [[ -f "$tiling_component_checkout/flake.nix" ]]; then
+              printf '  status:       active\n'
+            else
+              printf '  status:       unavailable (checkout not initialized)\n'
+            fi
                     }
 
                     case "$operation" in

@@ -10,6 +10,11 @@
     ashzsh.url = "github:pbert5/AshZsh";
     ashzsh.inputs.nixpkgs.follows = "nixpkgs";
     ashzsh.inputs.home-manager.follows = "home-manager";
+    tilingDesktop = {
+      url = "github:pbert5/TilingDesktop";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   outputs =

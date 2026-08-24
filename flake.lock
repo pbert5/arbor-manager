@@ -84,7 +84,31 @@
         "ashzsh": "ashzsh",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "tilingDesktop": "tilingDesktop"
+      }
+    },
+    "tilingDesktop": {
+      "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787545284,
+        "narHash": "sha256-4+W270ioziPJbws7qlDF5lgPVQXUl09O7KZgb5t3oAg=",
+        "owner": "pbert5",
+        "repo": "TilingDesktop",
+        "rev": "5e494d8cfee14bcab5f2f695c4c4bdaafcd9c2c3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "TilingDesktop",
+        "type": "github"
       }
     }
   },
