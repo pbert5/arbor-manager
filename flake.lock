@@ -2,7 +2,9 @@
   "nodes": {
     "ashzsh": {
       "inputs": {
-        "home-manager": "home-manager",
+        "home-manager": [
+          "home-manager"
+        ],
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -44,7 +46,6 @@
     "home-manager": {
       "inputs": {
         "nixpkgs": [
-          "ashzsh",
           "nixpkgs"
         ]
       },
@@ -83,6 +84,7 @@
       "inputs": {
         "ashzsh": "ashzsh",
         "flake-parts": "flake-parts",
+        "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }
     }

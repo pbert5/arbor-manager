@@ -13,6 +13,12 @@ when they become real.
 nix develop
 ```
 
+The default development shell is powered by AshZsh. It activates an isolated
+Home Manager generation under `/tmp/nix-arbor-ashzsh` and starts AshZsh's Zsh
+for interactive sessions. The generation is cached by activation-package
+identity and does not modify the normal home configuration or start user
+services.
+
 Or enable automatic loading once in this checkout:
 
 ```sh

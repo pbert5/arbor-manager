@@ -47,7 +47,12 @@ it needs.
 
 ## Checks and tooling
 
-The default shell contains the tools used for everyday Nix Arbor work. The
+The default shell contains the tools used for everyday Nix Arbor work and is
+configured through the `inputs.ashzsh.homeModules.default` Home Manager module.
+Nix Arbor evaluates a small shell-only Home Manager generation in an isolated
+`/tmp/nix-arbor-ashzsh` home and hands interactive sessions to its Zsh. The
+generation is not the user's normal Home Manager profile, and service startup
+is disabled for the devshell generation. The
 formatter is `nixfmt`, exposed through the standard `formatter` output so
 `nix fmt` is the source of truth. Checks run `nixfmt`, `statix`, and `deadnix`
 over the small root composition layer. Heavy build orchestration and packaging
