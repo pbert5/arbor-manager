@@ -30,6 +30,8 @@ pkgs.testers.runNixOSTest {
       systemd.services.lan-provider = {
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
+          User = "arbor-networkd";
+          Group = "arbor-networkd";
           ExecStart = "${networkManagerPackage}/bin/arbor-network-provider-lan --node source --interface eth1 --socket /run/arbor-lan/lan.sock";
           RuntimeDirectory = "arbor-lan";
           Restart = "on-failure";
