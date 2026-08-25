@@ -23,11 +23,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787627355,
-        "narHash": "sha256-82GEkg50WqJ9Z+f6DJBCAHiDnuo6QZJRfDly7Wacsig=",
+        "lastModified": 1787627469,
+        "narHash": "sha256-20eZwoqIGMBJ3VA1VC6FWb8XrB5/BlpL8TgqiUpLpg0=",
         "owner": "pbert5",
         "repo": "arbor-registry",
-        "rev": "0182a7e0e247e840313bfae833ef5392e0b3f5a7",
+        "rev": "9265a52b05cf39bb1d4b450a07543ae01ad73fc3",
         "type": "github"
       },
       "original": {
