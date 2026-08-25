@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1787634415,
-        "narHash": "sha256-4n8iRTAcICObRK82JY9I+7kU0nSpy3LoP35iRFHODs0=",
+        "lastModified": 1787635567,
+        "narHash": "sha256-XGRaWwxj3FQkdLQVTXJu0hpz/R3qpX7jJaKSGvbnoGA=",
         "owner": "pbert5",
         "repo": "arbor-manager",
-        "rev": "4279a1ef2fe80c99842442885a6e94e6787b533c",
+        "rev": "a8faaec60f2439ecf950a5ac25262392923817d2",
         "type": "github"
       },
       "original": {
@@ -20,14 +20,15 @@
     },
     "arbor-registry": {
       "inputs": {
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs_2",
+        "systemd-vaultd": "systemd-vaultd"
       },
       "locked": {
-        "lastModified": 1787634415,
-        "narHash": "sha256-5Ck3KajJ6hk58Dcp/oTkH7zGzi1Eoxz9/aKhhVNbXEU=",
+        "lastModified": 1787635560,
+        "narHash": "sha256-Smp0YbcLi6/CvnSyK53bZEmP1ZcDf/NaY7hYo4iTrcc=",
         "owner": "pbert5",
         "repo": "arbor-registry",
-        "rev": "128d50f56210204bb8b42dff2ecf9562bbaf62ab",
+        "rev": "57d06c8d53c88b9928d61699729ca2f39dff64d6",
         "type": "github"
       },
       "original": {
@@ -323,6 +324,28 @@
         "tilingDesktop": "tilingDesktop"
       }
     },
+    "systemd-vaultd": {
+      "inputs": {
+        "nixpkgs": [
+          "arbor-registry",
+          "nixpkgs"
+        ],
+        "treefmt-nix": "treefmt-nix"
+      },
+      "locked": {
+        "lastModified": 1787083709,
+        "narHash": "sha256-0f93RzgvTCjvmRRcgBPkr7ND87+yg3kKxuql2tD9AeE=",
+        "owner": "numtide",
+        "repo": "systemd-vaultd",
+        "rev": "0460f262d28903f05192d8a9768782fb34fe8384",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "systemd-vaultd",
+        "type": "github"
+      }
+    },
     "tilingDesktop": {
       "inputs": {
         "home-manager": [
@@ -343,6 +366,28 @@
       "original": {
         "owner": "pbert5",
         "repo": "TilingDesktop",
+        "type": "github"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "arbor-registry",
+          "systemd-vaultd",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786901030,
+        "narHash": "sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "27b3b12a8e6375f28ebe122f07d230ca5459bbfa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
         "type": "github"
       }
     }
