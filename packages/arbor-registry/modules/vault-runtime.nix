@@ -20,6 +20,8 @@ let
       || lib.hasPrefix "/run/secrets/" value
       || lib.hasPrefix "-----BEGIN" value
       || lib.hasInfix "-----BEGIN" value
+      || builtins.match "^[A-Za-z][A-Za-z0-9+.-]*://[^/?#[:space:]]+:[^/?#[:space:]]+@.*$" value != null
+      || builtins.match "^Bearer[[:space:]]+[^[:space:]]+$" value != null
     );
 
   isSafeIdentifier =
@@ -102,6 +104,8 @@ let
     lib.nameValuePair fetcher {
       description = "Runtime OpenBao credential fetch (${name})";
       wantedBy = [ "multi-user.target" ];
+      after = [ "systemd-vaultd.service" ];
+      wants = [ "systemd-vaultd.service" ];
       serviceConfig = {
         Type = "simple";
         ExecStart = lib.escapeShellArgs (providerArgs provider requirement name binding.service);
@@ -276,6 +280,10 @@ in
             in
             (provider.address == null || !isUnsafeString provider.address)
             && (provider.namespace == null || !isUnsafeString provider.namespace)
+            && (
+              provider.tokenFile == null
+              || (lib.hasPrefix "/" provider.tokenFile && !isUnsafeString provider.tokenFile)
+            )
             && lib.all (
               value: !(lib.hasPrefix "-----BEGIN" value) && !(lib.hasPrefix "/run/secrets/" value)
             ) commandArgs
