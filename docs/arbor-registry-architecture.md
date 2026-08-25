@@ -46,9 +46,12 @@ Initial record families are `node-identity`, `identity-generation`,
 `recovery-authorization`, `revocation`, and `receipt`. They are explicit
 schemas, not one generic mutable JSON document.
 
-The first implementation may use a deterministic in-process transport for
-tests and snapshots. OrbitDB integration is a provider behind the same
-append/fetch interface and must not be required by Nix evaluation.
+The implementation provides a deterministic in-process provider for tests and
+an optional OrbitDB/Helia transport daemon behind the same append/fetch
+interface. The daemon is transport-only and keeps Python validation
+authoritative; cross-peer replication still requires externally configured
+peer bootstrap and is not asserted by the local checks. Neither provider is
+required by Nix evaluation.
 
 The steady-state input is `github:pbert5/arbor-registry`. During local
 component development Nix Arbor uses `--override-input arbor-registry
@@ -171,8 +174,9 @@ resurrect; and local overrides do not silently alter security authority.
 The current extracted milestone also includes an optional runtime package
 with Ed25519 key storage, durable local ingestion, compatibility/lineage
 quarantine, and recovery metadata. Those runtime facilities are deliberately
-transport-provider and secret-provider neutral. It still does not claim a
-production OrbitDB/Helia adapter, live OpenBao or systemd-vaultd deployment,
+transport-provider and secret-provider neutral. It still does not claim
+cross-peer OrbitDB convergence, live OpenBao/systemd-vaultd credential
+delivery,
 or live SSH/Colmena execution; those require separate executable integration
 tests and must not be inferred from the pure library or local runtime fixture.
 

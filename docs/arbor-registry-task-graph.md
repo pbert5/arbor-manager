@@ -41,11 +41,12 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DEPLOYMENT-REVIEW-FIX | DONE | deployment review | worker; manager | topology-safe canaries and snapshot-bound Colmena projection |
 | RUNTIME-REVIEW-FIX | DONE | security/distributed review | worker; registry runtime | compatibility, lineage, malformed/conflict quarantine and locking |
 | SECURITY-BOUNDARY-FIX | DONE (model boundary) | security review | worker; registry/manager | recovery/vault identifiers, recursive protections, redacted inspection |
-| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; live OrbitDB/OpenBao/systemd-vaultd/CLI execution remains explicitly incomplete |
-| ORBITDB-ADAPTER | DONE (contract) | runtime Provider boundary | worker; `packages/arbor-registry/runtime` | legacy transport audit and bounded provider/adapter contract; live OrbitDB remains follow-up |
+| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; cross-peer OrbitDB, live vault delivery, and remote deployment remain unverified |
+| ORBITDB-ADAPTER | DONE (optional daemon) | runtime Provider boundary | worker; `packages/arbor-registry/transport` | extracted OrbitDB/Helia daemon and socket contract; cross-peer replication remains unverified |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
-| ARBOR-CLI | DONE (offline) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan CLI; no live execution |
-| VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; no live OpenBao |
+| ARBOR-CLI | DONE (offline) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan/apply gate; no live execution |
+| DEPLOYMENT-ACK-EXECUTION | DONE (offline gate) | deployment planner + CLI | worker; `packages/arbor-manager` | digest-bound acknowledgement and dry-run gate; remote execution remains external |
+| VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; live VM attempt not retained as evidence |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 
