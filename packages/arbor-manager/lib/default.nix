@@ -1,5 +1,8 @@
 { lib }:
 let
+  nodeSelection = import ./node-selection.nix { inherit lib; };
+  deploymentPlan = import ./deployment-plan.nix { inherit lib nodeSelection; };
+
   machineTypes = {
     system = lib.types.enum [
       "x86_64-linux"
@@ -173,6 +176,9 @@ in
     localSource
     registrySnapshot
     ;
+
+  inherit (nodeSelection) graph selectors select;
+  inherit (deploymentPlan) plan;
 
   mkMachines =
     {

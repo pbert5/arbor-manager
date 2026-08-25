@@ -86,6 +86,7 @@
           assert !(builtins.hasAttr "clusterRole" lib.machineTypes);
           assert snapshot.machineNames == [ "snapshot" ];
           assert snapshot.configurations.snapshot.config.networking.hostName == "snapshot";
+          assert (import ./tests/node-selection.nix { inherit (nixpkgs) lib; });
           (import nixpkgs { inherit system; }).emptyFile;
       });
     };
