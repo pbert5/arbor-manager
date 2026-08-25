@@ -2,14 +2,15 @@
   "nodes": {
     "arbor-manager": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "arbor-network-manager": "arbor-network-manager",
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787687539,
-        "narHash": "sha256-M5syJNtaJXik6dvY0q+oSC0JWmUotvEtjuZTwwj6I04=",
+        "lastModified": 1787689711,
+        "narHash": "sha256-A3/0iHRy2WuDS1BOrQTIrmvnRcKf5TnLUg9gpi7qmjc=",
         "owner": "pbert5",
         "repo": "arbor-manager",
-        "rev": "a46097e53bb94155ecd0cfd794170d7b18fa0635",
+        "rev": "309a970843daaa0dd7ace3cee3b47c76afac9e8f",
         "type": "github"
       },
       "original": {
@@ -20,14 +21,14 @@
     },
     "arbor-network-manager": {
       "inputs": {
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1787687922,
-        "narHash": "sha256-+eUwOBH/My4/xA0r/IhFXyDoqO1MZCpoAisOrUo1P4Q=",
+        "lastModified": 1787689229,
+        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
         "owner": "pbert5",
         "repo": "arbor-network-manager",
-        "rev": "2ebc0af196182aa9b1e550405ed35ca9aa269ef6",
+        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
         "type": "github"
       },
       "original": {
@@ -38,14 +39,32 @@
     },
     "arbor-network-manager_2": {
       "inputs": {
-        "nixpkgs": "nixpkgs_5"
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1787687922,
-        "narHash": "sha256-+eUwOBH/My4/xA0r/IhFXyDoqO1MZCpoAisOrUo1P4Q=",
+        "lastModified": 1787689229,
+        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
         "owner": "pbert5",
         "repo": "arbor-network-manager",
-        "rev": "2ebc0af196182aa9b1e550405ed35ca9aa269ef6",
+        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "type": "github"
+      }
+    },
+    "arbor-network-manager_3": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_6"
+      },
+      "locked": {
+        "lastModified": 1787689229,
+        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
         "type": "github"
       },
       "original": {
@@ -56,7 +75,7 @@
     },
     "arbor-registry": {
       "inputs": {
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_4",
         "systemd-vaultd": "systemd-vaultd"
       },
       "locked": {
@@ -349,6 +368,22 @@
     },
     "nixpkgs_4": {
       "locked": {
+        "lastModified": 1787498568,
+        "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "56c02bc00adcf003215cc4bd996d6efaf4cff188",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_5": {
+      "locked": {
         "lastModified": 1787360063,
         "narHash": "sha256-dt4WdcvsA8/RCe+VZZwqU0X+XMM3wBbGCWA0/sFWzGo=",
         "owner": "NixOS",
@@ -363,7 +398,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1787498568,
         "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
@@ -379,7 +414,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
+    "nixpkgs_7": {
       "locked": {
         "lastModified": 1784856561,
         "narHash": "sha256-J+Bx1Z6Oeoj2FgnBhRMKyUhhtDoOpTgXYaVLZpDjW4A=",
@@ -398,14 +433,14 @@
     "root": {
       "inputs": {
         "arbor-manager": "arbor-manager",
-        "arbor-network-manager": "arbor-network-manager",
+        "arbor-network-manager": "arbor-network-manager_2",
         "arbor-registry": "arbor-registry",
         "ashes-desktop-apps": "ashes-desktop-apps",
         "ashes-tools": "ashes-tools",
         "ashzsh": "ashzsh",
         "flake-parts": "flake-parts_4",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs_4",
+        "nixpkgs": "nixpkgs_5",
         "tilingDesktop": "tilingDesktop",
         "yggdrasil-private": "yggdrasil-private"
       }
@@ -479,15 +514,15 @@
     },
     "yggdrasil-private": {
       "inputs": {
-        "arbor-network-manager": "arbor-network-manager_2",
-        "nixpkgs": "nixpkgs_6"
+        "arbor-network-manager": "arbor-network-manager_3",
+        "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1787688076,
-        "narHash": "sha256-YkRH+Fhivw2UYPGhf57WICAb3h6vKcmJHd6ODVTjvtE=",
+        "lastModified": 1787689756,
+        "narHash": "sha256-MhNbzG2gFXwdmHk9sFKi//Z5JfbDc1Q0n/7KgQ4CXgI=",
         "ref": "main",
-        "rev": "7e42f881716782e04150d14148440bdf292e000d",
-        "revCount": 5,
+        "rev": "7f0973cd79d3bc51f510fcf4d5d580f98918c9bb",
+        "revCount": 6,
         "type": "git",
         "url": "https://github.com/pbert5/yggdrasil-private.git"
       },
