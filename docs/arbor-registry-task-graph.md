@@ -61,7 +61,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | TRANSPORT-REPLAY-RECOVERY-HARDENING | DONE | distributed review | lead; registry transport | duplicate-event convergence, unreadable-record cursor retry, bounded quarantine, private state permissions |
 | FINAL-POSTFIX-REVIEW | DONE | provider/transport hardening | independent security + Nix reviewers | cursor/authority/secret-key/vault-template MUST findings fixed and independently re-reviewed |
 | SECURITY-DEPLOYMENT-FIX-ROUND-2 | DONE | final security/deployment review | lead; registry runtime + manager CLI | HTTPS boundary, redacted unsafe quarantine, strict endpoint/receipt validation, process-group timeout, stable transport cursors |
-| REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `a9fa0de`, arbor-registry `f0cc69e`; root lock refreshed and normal remote checks passed |
+| REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `66bcab5`, arbor-registry `ce54e00`; root lock refreshed and normal remote checks passed |
 | UPSTREAM-VAULTD-VM | DONE (fixture) | upstream contract | integration-test; `packages/arbor-registry` | NixOS VM proves systemd-vaultd waits on the rendered JSON credential and delivers it through LoadCredential |
 | TRANSPORT-RECOVERY-TESTS | DONE | transport/runtime recovery | worker; `packages/arbor-registry` | three-daemon reconnect/replay convergence and out-of-order identity-generation recovery with stale approver rejection |
 | DEPLOYMENT-BOUNDARY-TESTS | DONE | deployment planning | worker; `packages/arbor-manager` | incompatible-target exclusion, Colmena canary/batch planning, failed receipts, resume validation, and backend identity |
