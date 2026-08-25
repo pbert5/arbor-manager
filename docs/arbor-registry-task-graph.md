@@ -49,6 +49,8 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; live VM attempt not retained as evidence |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
+| TRANSPORT-CONVERGENCE-FIX | DONE (bounded) | optional OrbitDB daemon | worker; registry transport/runtime | peer bootstrap, replicated indexing, cursor forwarding, atomic index writes |
+| SECURITY-HARDENING-ROUND-2 | DONE | final security review | workers; registry/manager | socket fail-closed, CLI redaction, recovery verifier/rotation safeguards |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
