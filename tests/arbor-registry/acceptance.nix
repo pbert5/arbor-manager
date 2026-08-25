@@ -275,8 +275,17 @@ let
       issuer = "operator-authority";
       generation = 1;
       operation = "recovery";
+      approverGeneration = 1;
       signature = "signed-operator-approval";
     };
+    trustedApprovers = [
+      {
+        identity = "operator";
+        role = "operator";
+        generation = 1;
+      }
+    ];
+    signatureVerifier = approval: approval.signature == "signed-operator-approval";
   };
   recoveryRevoked = recovery // {
     revocations = [

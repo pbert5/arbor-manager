@@ -188,7 +188,7 @@ let
         && lib.any (
           trusted:
           let
-            trustedIdentity = get "identity" (get "approver" null trusted);
+            trustedIdentity = get "identity" (get "approver" null trusted) trusted;
           in
           trustedIdentity == approver
           && get "role" null trusted == role
