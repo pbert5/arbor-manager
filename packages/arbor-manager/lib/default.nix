@@ -104,15 +104,22 @@ let
     );
 
   registrySnapshot =
-    snapshot:
+    {
+      digest,
+      machines,
+    }:
+    assert lib.assertMsg (
+      builtins.isString digest && digest != ""
+    ) "Arbor Manager: registry snapshots require a non-empty digest.";
     lib.mapAttrsToList (name: record: {
       inherit name record;
       modules = [ ];
       provenance = {
         kind = "registry-snapshot";
+        inherit digest;
       };
       precedence = 0;
-    }) snapshot;
+    }) machines;
 
   mkMachine =
     {
@@ -146,7 +153,7 @@ let
       managerModule = { lib, ... }: {
         options.arbor.machine = lib.mkOption {
           type = lib.types.raw;
-          default = machine;
+          readOnly = true;
           description = "Normalized Arbor Manager machine record.";
         };
         config = {

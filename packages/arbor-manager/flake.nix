@@ -39,7 +39,9 @@
                     system = "x86_64-linux";
                     profiles = [ ];
                     hostname = "pure-host";
-                    cluster.role = "arbitrary-data";
+                    cluster = {
+                      relationshipData = [ "parent-a" ];
+                    };
                   };
                   provenance = {
                     kind = "test";
@@ -48,23 +50,16 @@
                   precedence = 7;
                 }
               ];
-              extraModules = [
-                ({ lib, ... }: {
-                  config.arbor.machine = lib.mkForce (
-                    assembled.machines.fixture.machine
-                    // {
-                      forced = true;
-                    }
-                  );
-                })
-              ];
             };
             snapshot = lib.mkMachines {
               inputs = fixtureInputs;
               sources = lib.registrySnapshot {
-                snapshot = {
-                  system = "x86_64-linux";
-                  profiles = [ ];
+                digest = "sha256:test-snapshot";
+                machines = {
+                  snapshot = {
+                    system = "x86_64-linux";
+                    profiles = [ ];
+                  };
                 };
               };
             };
@@ -79,10 +74,10 @@
             ];
           assert assembled.configurations.fixture.config.networking.hostName == "fixture";
           assert pure.configurations.pure.config.networking.hostName == "pure-host";
-          assert pure.configurations.pure.config.arbor.machine.forced;
+          assert !(builtins.hasAttr "forced" pure.configurations.pure.config.arbor.machine);
           assert pure.machines.pure.machine.provenance.kind == "test";
           assert pure.machines.pure.machine.precedence == 7;
-          assert pure.machines.pure.machine.cluster.role == "arbitrary-data";
+          assert pure.machines.pure.machine.cluster.relationshipData == [ "parent-a" ];
           assert !(builtins.hasAttr "clusterRole" lib.machineTypes);
           assert snapshot.machineNames == [ "snapshot" ];
           assert snapshot.configurations.snapshot.config.networking.hostName == "snapshot";
