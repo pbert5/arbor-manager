@@ -244,9 +244,8 @@ omitted.
 The standalone `packages/arbor-registry` component owns pure signed-record
 validation, accepted/materialized projections, quarantine, relationship graph
 queries, endpoint/service metadata, and declarative public policy options. The
-root flake consumes it through a local component input while the dedicated
-remote repository is being established; use `nix run .#local -- overrides` to
-inspect all component overrides.
+root flake consumes the independent `github:pbert5/arbor-registry` input; use
+`nix run .#local -- overrides` to inspect local development overrides.
 
 Nix evaluation consumes immutable snapshots and never queries a live registry.
 Nix/Git contains construction logic, Arbor Registry contains mutable public

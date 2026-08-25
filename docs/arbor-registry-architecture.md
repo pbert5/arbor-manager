@@ -50,11 +50,10 @@ The first implementation may use a deterministic in-process transport for
 tests and snapshots. OrbitDB integration is a provider behind the same
 append/fetch interface and must not be required by Nix evaluation.
 
-During local component development Nix Arbor uses `path:./packages/arbor-registry`
-with `--override-input arbor-registry path:...`. The intended steady-state
-input is `github:pbert5/arbor-registry`; the remote repository is not yet
-created in this workspace, so the local path is an explicit temporary
-composition choice rather than a hidden runtime dependency.
+The steady-state input is `github:pbert5/arbor-registry`. During local
+component development Nix Arbor uses `--override-input arbor-registry
+path:./packages/arbor-registry`; the checked-out component remains available
+for the repository's local workflow.
 
 ## Graph semantics
 

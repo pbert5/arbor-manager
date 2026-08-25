@@ -19,14 +19,18 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "path": "./packages/arbor-registry",
-        "type": "path"
+        "lastModified": 1787626976,
+        "narHash": "sha256-KZhp4hQaEWwbVKVWfj1Wi3MbH5ll/KUY+i9oCj9kOas=",
+        "owner": "pbert5",
+        "repo": "arbor-registry",
+        "rev": "9cabb855a4a9b2b169e254607664feb26b5947ed",
+        "type": "github"
       },
       "original": {
-        "path": "./packages/arbor-registry",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "pbert5",
+        "repo": "arbor-registry",
+        "type": "github"
+      }
     },
     "ashes-desktop-apps": {
       "inputs": {
