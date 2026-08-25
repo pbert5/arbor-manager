@@ -33,12 +33,15 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DISTRIBUTED-SYSTEMS-REVIEW | DONE | integrated registry | reviewer + fixer | schema/lineage/cycle/idempotency findings fixed |
 | DEPLOYMENT-REVIEW | DONE | planner/backends | reviewer + fixer | ordering/cycle/backend/name findings fixed |
 | FINAL-VALIDATION | DONE | reviews + fixes | lead + integration-test | all-systems component/root checks and pure scenarios passed |
-| SOURCE-PRECEDENCE-MERGE | IN_PROGRESS | machine source + snapshot | worker; `packages/arbor-manager` | registry → local → session merge with provenance |
+| SOURCE-PRECEDENCE-MERGE | DONE | machine source + snapshot | worker; `packages/arbor-manager` | registry → local → session merge with provenance |
 | VAULT-BINDING-VALIDATION | DONE | vault runtime boundary | worker; `packages/arbor-registry` | binding and public-identifier assertions |
-| MULTI-NODE-RUNTIME-SCENARIO | IN_PROGRESS | runtime + recovery + manager | integration-test | root/parent/child/peer/standby scenario |
-| ARBOR-MANAGER-REMOTE | READY | manager source integration | lead | standalone `pbert5/arbor-manager` flake and root remote input |
-| ARBOR-REGISTRY-REMOTE-SYNC | READY | registry changes stabilized | lead | publish latest component and refresh root lock |
-| FINAL-GAP-AUDIT | READY | active implementation tasks | lead + reviewers | explicit incomplete-item and acceptance audit |
+| MULTI-NODE-RUNTIME-SCENARIO | DONE (test evidence) | runtime + recovery + manager | integration-test | root/parent/child/peer/standby scenario; live services not exercised |
+| ARBOR-MANAGER-REMOTE | DONE | manager source integration | lead | standalone `pbert5/arbor-manager`, remote lock and local override |
+| ARBOR-REGISTRY-REMOTE-SYNC | DONE | registry changes stabilized | lead | latest component published and root lock refreshed |
+| DEPLOYMENT-REVIEW-FIX | DONE | deployment review | worker; manager | topology-safe canaries and snapshot-bound Colmena projection |
+| RUNTIME-REVIEW-FIX | DONE | security/distributed review | worker; registry runtime | compatibility, lineage, malformed/conflict quarantine and locking |
+| SECURITY-BOUNDARY-FIX | DONE (model boundary) | security review | worker; registry/manager | recovery/vault identifiers, recursive protections, redacted inspection |
+| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; live OrbitDB/OpenBao/systemd-vaultd/CLI execution remains explicitly incomplete |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
