@@ -13,6 +13,7 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
       registry = import ./lib { lib = nixpkgs.lib; };
       nixosModule = import ./modules/nixos.nix;
+      vaultRuntimeModule = import ./modules/vault-runtime.nix;
     in
     {
       lib = registry;
@@ -27,7 +28,10 @@
           default = runtime;
         }
       );
-      nixosModules.default = nixosModule;
+      nixosModules = {
+        default = nixosModule;
+        vault-runtime = vaultRuntimeModule;
+      };
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt-tree);
       checks = forAllSystems (system: {
         invariants = import ./tests/invariants.nix {
@@ -54,6 +58,10 @@
               python -m unittest discover -s ${./runtime/tests} -v
               touch $out
             '';
+        vault-runtime = import ./tests/vault-runtime.nix {
+          module = vaultRuntimeModule;
+          pkgs = import nixpkgs { inherit system; };
+        };
       });
     };
 }
