@@ -152,10 +152,13 @@
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} > "$work/applied.json" 2> "$work/backend-error"; then :; else cat "$work/backend-error"; cat "$work/applied.json"; exit 1; fi
                 jq -e '.status == "applied" and .applied == true and (.results | length) == 1 and .results[0].status == "succeeded" and .results[0].provider.status == "succeeded" and .results[0].provider.secret == "<redacted>"' "$work/applied.json"
                 if grep -q 'do-not-print' "$work/applied.json"; then exit 1; fi
-                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${failingBackend} > "$work/failed.json" 2> "$work/failed-error"; then exit 1; fi
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${failingBackend} --receipt "$work/failed-receipt.json" > "$work/failed.json" 2> "$work/failed-error"; then exit 1; fi
                 jq -e '.status == "failed" and .applied == false and .results[0].error == "backend response did not confirm request identity or success"' "$work/failed.json"
+                jq -e '.format == "arbor-manager/deployment-receipt" and .status == "partial" and (.results | length) == 1 and .results[0].status == "failed"' "$work/failed-receipt.json"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} --resume "$work/failed-receipt.json" > "$work/invalid-resume.json" 2> "$work/invalid-resume-error"; then exit 1; fi
+                grep -q 'resume receipt identity is not bound' "$work/invalid-resume-error"
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} --dry-run > "$work/dry-run.json"; then :; else exit 1; fi
-                batch=$(jq -cS '.snapshot.selected = ["api", "api-2"] | .snapshot.nodes["api-2"] = .snapshot.nodes.api | .plan.phases = [{name: "canary", names: ["api"], commands: ["mock"]}, {name: "batches", names: [["api-2"]], commands: [["mock"]]}] | del(.snapshotDigest, .acknowledgement, .digest)' "$work/snapshot.json")
+                batch=$(jq -cS '.snapshot.selected = ["api", "api-2"] | .snapshot.nodes["api-2"] = .snapshot.nodes.api | .plan.backend = "colmena" | .plan.phases = [{name: "canary", names: ["api"], commands: ["mock"]}, {name: "batches", names: [["api-2"]], commands: [["mock"]]}] | del(.snapshotDigest, .acknowledgement, .digest)' "$work/snapshot.json")
                 batch_snapshot_digest=$(printf '%s' "$batch" | jq -cS '.snapshot' | sha256sum | cut -d' ' -f1)
                 batch=$(jq --arg digest "$batch_snapshot_digest" '. + {snapshotDigest: $digest}' <<<"$batch")
                 batch_ack=$(printf '%s' "$batch" | jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
@@ -163,7 +166,7 @@
                 batch_digest=$(printf '%s' "$batch" | jq -cS 'del(.digest)' | sha256sum | cut -d' ' -f1)
                 jq --arg digest "$batch_digest" '. + {digest: $digest}' <<<"$batch" > "$work/batch.json"
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/batch.json" --acknowledgement "$batch_ack" --backend-executable ${mockBackend} --receipt "$work/receipt.json" > "$work/batch-applied.json"; then :; else cat "$work/batch-applied.json"; exit 1; fi
-                jq -e --arg receipt "$work/receipt.json" '.status == "applied" and (.results | length) == 2 and .receipt == $receipt' "$work/batch-applied.json"
+                jq -e --arg receipt "$work/receipt.json" '.status == "applied" and (.results | length) == 2 and .receipt == $receipt and all(.results[]; .provider.backend == "colmena")' "$work/batch-applied.json"
                 jq -e --arg digest "$(jq -r .snapshotDigest "$work/batch.json")" '.format == "arbor-manager/deployment-receipt" and .snapshotDigest == $digest and (.results | length) == 2' "$work/receipt.json"
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/batch.json" --acknowledgement "$batch_ack" --backend-executable ${mockBackend} --resume "$work/receipt.json" > "$work/resumed.json"; then :; else exit 1; fi
                 jq -e 'all(.results[]; .resumed == true)' "$work/resumed.json"
