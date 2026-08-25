@@ -25,7 +25,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | MACHINE-SNAPSHOT-TOOLING | DONE | registry source | manager; `packages/arbor-manager` | inspect/export provenance and digest checks |
 | OPENBAO-RUNTIME-IDENTITY | DONE | secret boundary + registry | registry; `packages/arbor-registry` | runtime identity generations and recovery boundary |
 | ENROLLMENT-RECOVERY-LIFECYCLE | DONE | runtime identity boundary | registry runtime | signed enrollment approvals, identity generations, revocation, recovery approvals, provenance, and receipts |
-| AUTHORITY-ACCEPTANCE-BOUNDARY | DONE | graph + capability model | registry pure Nix | reconcile-stage relationship/capability provenance and non-amplification enforcement |
+| AUTHORITY-ACCEPTANCE-BOUNDARY | DONE | graph + capability model | registry pure Nix | reconcile-stage relationship/capability provenance, transitive issuer paths, issuer/parent binding, and non-amplification enforcement |
 | SYSTEMD-VAULTD-INTEGRATION | DONE | secret boundary + research | registry; `packages/arbor-registry` | runtime gate/watcher plus real upstream systemd-vaultd socket integration |
 | ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
 | NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
