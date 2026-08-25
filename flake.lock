@@ -36,6 +36,24 @@
         "type": "github"
       }
     },
+    "arbor-network-manager_2": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_5"
+      },
+      "locked": {
+        "lastModified": 1787687922,
+        "narHash": "sha256-+eUwOBH/My4/xA0r/IhFXyDoqO1MZCpoAisOrUo1P4Q=",
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "rev": "2ebc0af196182aa9b1e550405ed35ca9aa269ef6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "type": "github"
+      }
+    },
     "arbor-registry": {
       "inputs": {
         "nixpkgs": "nixpkgs_3",
@@ -345,6 +363,38 @@
         "type": "github"
       }
     },
+    "nixpkgs_5": {
+      "locked": {
+        "lastModified": 1787498568,
+        "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "56c02bc00adcf003215cc4bd996d6efaf4cff188",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_6": {
+      "locked": {
+        "lastModified": 1784856561,
+        "narHash": "sha256-J+Bx1Z6Oeoj2FgnBhRMKyUhhtDoOpTgXYaVLZpDjW4A=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "597283ad8aa0b331c788e97c4c262d58877074ef",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "arbor-manager": "arbor-manager",
@@ -356,7 +406,8 @@
         "flake-parts": "flake-parts_4",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_4",
-        "tilingDesktop": "tilingDesktop"
+        "tilingDesktop": "tilingDesktop",
+        "yggdrasil-private": "yggdrasil-private"
       }
     },
     "systemd-vaultd": {
@@ -424,6 +475,26 @@
         "owner": "numtide",
         "repo": "treefmt-nix",
         "type": "github"
+      }
+    },
+    "yggdrasil-private": {
+      "inputs": {
+        "arbor-network-manager": "arbor-network-manager_2",
+        "nixpkgs": "nixpkgs_6"
+      },
+      "locked": {
+        "lastModified": 1787688076,
+        "narHash": "sha256-YkRH+Fhivw2UYPGhf57WICAb3h6vKcmJHd6ODVTjvtE=",
+        "ref": "main",
+        "rev": "7e42f881716782e04150d14148440bdf292e000d",
+        "revCount": 5,
+        "type": "git",
+        "url": "https://github.com/pbert5/yggdrasil-private.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "https://github.com/pbert5/yggdrasil-private.git"
       }
     }
   },
