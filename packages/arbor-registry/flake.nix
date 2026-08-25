@@ -69,14 +69,12 @@
             pkgs = import nixpkgs { inherit system; };
             package = import ./transport/package.nix { inherit (pkgs) buildNpmPackage nodejs_22; };
           in
-          pkgs.runCommand "arbor-registry-transport-tests"
-            { nativeBuildInputs = [ pkgs.nodejs_22 ]; }
-            ''
-              node --check ${./transport}/registryd.mjs
-              node --check ${./transport}/test/registryd.test.mjs
-              node --test ${package}/lib/arbor-registryd/source/test/*.test.mjs
-              touch $out
-            '';
+          pkgs.runCommand "arbor-registry-transport-tests" { nativeBuildInputs = [ pkgs.nodejs_22 ]; } ''
+            node --check ${./transport}/registryd.mjs
+            node --check ${./transport}/test/registryd.test.mjs
+            node --test ${package}/lib/arbor-registryd/source/test/*.test.mjs
+            touch $out
+          '';
         vault-runtime = import ./tests/vault-runtime.nix {
           module = vaultRuntimeModule;
           pkgs = import nixpkgs { inherit system; };
