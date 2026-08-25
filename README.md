@@ -1,0 +1,84 @@
+# Arbor Manager
+
+Arbor Manager is the reusable assembly layer between a machine source and
+ordinary NixOS configurations. `mkMachines` consumes pure source entries, so
+callers can provide records from any source without adding a registry
+dependency.
+
+Its public API is `lib.mkMachines`:
+
+```nix
+inputs.arbor-manager.lib.mkMachines {
+  inherit inputs;
+  sources = [
+    {
+      name = "server";
+      record = { system = "x86_64-linux"; profiles = [ "server" ]; };
+      provenance = { kind = "registry-snapshot"; revision = "..."; };
+      precedence = 10;
+    }
+  ];
+  profiles = { server = [ ./profiles/server.nix ]; };
+}
+```
+
+Each source entry has `name` and `record`, and may provide `modules`,
+`provenance`, and numeric `precedence`. Records retain `cluster` (including
+any relationship fields) as data; Arbor Manager does not prescribe role
+values. `localSource ./config/machines` adapts the conventional directory
+layout, and `registrySnapshot { digest = "sha256:..."; machines = { name = record; }; }`
+adapts an immutable accepted snapshot. Registry snapshot entries contribute
+public data only; trusted executable modules are selected by local composition.
+
+## Machine and deployment snapshots
+
+`lib.snapshot` provides pure inspection and export helpers. `inspectMachine`
+accepts a resolved `mkMachines` entry or a record and returns source and
+per-field provenance. `exportMachine` and `exportDeployment` produce
+deterministic canonical JSON, while `digest` hashes that JSON. Secret-like
+fields, runtime strings, paths, functions, derivations, and functors become
+`<redacted>` before serialization, so exports contain no executable Nix or
+secret material. Registry snapshots remain immutable data inputs: they supply
+no modules; trusted executable code comes only from local composition.
+
+For compatibility, `machinesPath = ./config/machines` remains an alias for
+the local adapter. Local directories contain `default.nix` (facts), and may
+contain `hardware-configuration.nix` and `configuration.nix` modules.
+Directories are discovered deterministically in lexical order. Each result is
+still assembled with native `nixosSystem`, with the normalized record exposed
+at `config.arbor.machine` and as the `machine` special argument.
+
+## Selection and deployment plans
+
+The pure `lib.graph` function normalizes a node attrset whose optional
+`children` and `parents` fields contain node names. `lib.selectors` provides
+`local`, `children`, `descendants`, `parents`, `ancestors`, `peers`, and
+`accessible`; all results are sorted and cycle-safe. `lib.select` returns the
+selected names plus deterministic exclusion records. Nodes with
+`reachable = false`, `compatible = false`, disabled nodes, and suspended or
+standby nodes (unless explicitly allowed) are excluded with stable reason
+strings.
+
+`lib.plan` turns a selection into an inspectable deployment plan. It includes a
+canonical snapshot and SHA-256 digest, backend recommendation (`direct` or
+`colmena`), critical-route and state risks, canary/batch phases, acknowledgement
+digest, and copyable names/commands. The backend strings are interfaces only:
+Arbor Manager does not open SSH connections or execute Colmena.
+
+When a plan selects the Colmena backend, `lib.rawHive` projects the same
+resolved machine records into a raw Colmena hive. Only `plan.names` become
+nodes, so exclusions and an empty plan never imply apply-all. Node records may
+provide `targetHost`, `targetPort`, `targetUser` (or a `target` attrset) and
+`tags`; these become Colmena deployment metadata. `mkMachines` exposes
+`colmenaRawHive`, `colmenaSelection`, and `colmenaHive` only when its `inputs`
+contains a Colmena flake input. `colmenaHive` calls that input's `lib.makeHive`
+purely; it does not execute deployment.
+
+```nix
+plan = lib.plan {
+  nodes = inventory;
+  roots = [ "api" ];
+  selector = "accessible";
+  batchSize = 2;
+};
+```
