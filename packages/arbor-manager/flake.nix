@@ -30,6 +30,44 @@
               profiles = [ "server" ];
             };
             invalid = builtins.tryEval (lib.validateMachine "broken" { system = "i686-linux"; });
+            pure = lib.mkMachines {
+              inputs = fixtureInputs;
+              sources = [
+                {
+                  name = "pure";
+                  record = {
+                    system = "x86_64-linux";
+                    profiles = [ ];
+                    hostname = "pure-host";
+                    cluster.role = "arbitrary-data";
+                  };
+                  provenance = {
+                    kind = "test";
+                    source = "pure";
+                  };
+                  precedence = 7;
+                }
+              ];
+              extraModules = [
+                ({ lib, ... }: {
+                  config.arbor.machine = lib.mkForce (
+                    assembled.machines.fixture.machine
+                    // {
+                      forced = true;
+                    }
+                  );
+                })
+              ];
+            };
+            snapshot = lib.mkMachines {
+              inputs = fixtureInputs;
+              sources = lib.registrySnapshot {
+                snapshot = {
+                  system = "x86_64-linux";
+                  profiles = [ ];
+                };
+              };
+            };
           in
           assert valid.name == "fixture";
           assert valid.hostname == "fixture";
@@ -40,6 +78,14 @@
               "valid"
             ];
           assert assembled.configurations.fixture.config.networking.hostName == "fixture";
+          assert pure.configurations.pure.config.networking.hostName == "pure-host";
+          assert pure.configurations.pure.config.arbor.machine.forced;
+          assert pure.machines.pure.machine.provenance.kind == "test";
+          assert pure.machines.pure.machine.precedence == 7;
+          assert pure.machines.pure.machine.cluster.role == "arbitrary-data";
+          assert !(builtins.hasAttr "clusterRole" lib.machineTypes);
+          assert snapshot.machineNames == [ "snapshot" ];
+          assert snapshot.configurations.snapshot.config.networking.hostName == "snapshot";
           (import nixpkgs { inherit system; }).emptyFile;
       });
     };
