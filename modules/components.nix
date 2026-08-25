@@ -7,4 +7,6 @@
   };
   config.flake.nixosModules.tilingDesktop = inputs.tilingDesktop.nixosModules.default;
   config.flake.nixosModules.arborRegistry = inputs.arbor-registry.nixosModules.default;
+  config.flake.nixosModules.arborVaultRuntime = inputs.arbor-registry.nixosModules.vault-runtime;
+  config.flake.nixosModules.arborVaultRuntimeUpstream = inputs.arbor-registry.nixosModules.vault-runtime-upstream;
 }
