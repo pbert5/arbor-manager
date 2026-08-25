@@ -30,8 +30,8 @@ pkgs.testers.runNixOSTest {
       systemd.services.lan-provider = {
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          ExecStart = "${networkManagerPackage}/bin/arbor-network-provider-lan --node source --interface eth1 --socket /run/arbor/lan.sock";
-          RuntimeDirectory = "arbor";
+          ExecStart = "${networkManagerPackage}/bin/arbor-network-provider-lan --node source --interface eth1 --socket /run/arbor-lan/lan.sock";
+          RuntimeDirectory = "arbor-lan";
           Restart = "on-failure";
         };
       };
@@ -39,7 +39,7 @@ pkgs.testers.runNixOSTest {
         enable = true;
         package = networkManagerPackage;
         registrySnapshot = "/run/arbor/accepted.json";
-        providerSockets.lan = "/run/arbor/lan.sock";
+        providerSockets.lan = "/run/arbor-lan/lan.sock";
       };
     };
   };
@@ -66,6 +66,11 @@ pkgs.testers.runNixOSTest {
       "{schema:\"endpoint\",recordId:\"target\",generation:1,payload:{node:\"target\",network:\"lan\",provider:\"lan\",address:\"192.168.100.3\",generation:1,capabilities:[\"ssh\"],sshHostKey:$targetKey}}]}' > /run/arbor/accepted.json")
     source.succeed("systemctl restart arbor-networkd.service")
     source.wait_for_unit("arbor-networkd.service")
+    source.sleep(3)
+    print(source.execute("systemctl status arbor-networkd.service --no-pager"))
+    print(source.execute("journalctl -u arbor-networkd.service --no-pager"))
+    print(source.execute("ls -la /run /run/arbor /run/arbor-lan"))
+    print(source.execute("arbor-manager route --socket /run/arbor/networkd.sock --source source --target target"))
     source.succeed("arbor-manager ssh --socket /run/arbor/networkd.sock --source source --target target --user root")
   '';
 }
