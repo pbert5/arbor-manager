@@ -129,8 +129,14 @@ in
     };
   };
 
-  config = lib.mkIf config.cluster.registry.enable {
+  config = {
     assertions = [
+      {
+        assertion = !hasUnsafeValue config.cluster.vault;
+        message = "cluster.vault contains a secret-like key or unsafe value";
+      }
+    ]
+    ++ lib.optionals config.cluster.registry.enable [
       {
         assertion = !hasUnsafeValue config.cluster.registry.policy;
         message = "cluster.registry.policy contains a secret-like key or unsafe value";
@@ -138,10 +144,6 @@ in
       {
         assertion = !hasUnsafeValue config.cluster.registry.bootstrap;
         message = "cluster.registry.bootstrap contains a secret-like key or unsafe value";
-      }
-      {
-        assertion = !hasUnsafeValue config.cluster.vault;
-        message = "cluster.vault contains a secret-like key or unsafe value";
       }
     ];
   };
