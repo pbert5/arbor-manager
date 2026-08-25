@@ -59,7 +59,7 @@
               test "$(jq -r .endpoint.host <<<"$request")" = api.example
               test "$(jq -r .endpoint.port <<<"$request")" = 2222
               test "$(jq -r .endpoint.user <<<"$request")" = deploy
-              jq -n --arg node "$(jq -r .node <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "succeeded", node: $node, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest, secret: "do-not-print"}'
+              jq -n --arg phase "$(jq -r .phase <<<"$request")" --arg node "$(jq -r .node <<<"$request")" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "succeeded", phase: $phase, node: $node, endpoint: $endpoint, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest, secret: "do-not-print"}'
             '';
             failingBackend = pkgs.writeShellScript "arbor-manager-failing-backend" ''
               set -euo pipefail
