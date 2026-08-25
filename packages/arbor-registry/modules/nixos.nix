@@ -129,7 +129,7 @@ in
     };
   };
 
-  config = {
+  config = lib.mkIf config.cluster.registry.enable {
     assertions = [
       {
         assertion = !hasUnsafeValue config.cluster.registry.policy;

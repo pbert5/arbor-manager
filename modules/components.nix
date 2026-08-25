@@ -6,4 +6,5 @@
     tilingDesktop = inputs.tilingDesktop.homeModules.default;
   };
   config.flake.nixosModules.tilingDesktop = inputs.tilingDesktop.nixosModules.default;
+  config.flake.nixosModules.arborRegistry = inputs.arbor-registry.nixosModules.default;
 }
