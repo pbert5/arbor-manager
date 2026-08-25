@@ -1,5 +1,6 @@
 { lib }:
 let
+  recovery = import ./recovery.nix { inherit lib; };
   inherit (builtins)
     attrNames
     concatLists
@@ -565,4 +566,19 @@ in
     sign = bytes: "${token}:${bytes}";
     verify = bytes: signature: signature == "${token}:${bytes}";
   };
+  inherit (recovery)
+    approvalSet
+    approvalRecord
+    identityGeneration
+    revocation
+    isRevoked
+    generationUsable
+    recoveryAuthorization
+    relationshipEvent
+    rebindRelationship
+    transitionRelationship
+    promoteStandbyParent
+    validateAuthorityNonAmplification
+    retainedDescendants
+    ;
 }
