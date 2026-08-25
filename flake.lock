@@ -5,25 +5,29 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "path": "./packages/arbor-manager",
-        "type": "path"
+        "lastModified": 1787627397,
+        "narHash": "sha256-ehBAVZg5itbfdkGMatDBceWEh4Q8zpIcnXLMw63rHuo=",
+        "owner": "pbert5",
+        "repo": "arbor-manager",
+        "rev": "159efe9ad3dd35481f117589f010e6951f2f676d",
+        "type": "github"
       },
       "original": {
-        "path": "./packages/arbor-manager",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "pbert5",
+        "repo": "arbor-manager",
+        "type": "github"
+      }
     },
     "arbor-registry": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787626976,
-        "narHash": "sha256-KZhp4hQaEWwbVKVWfj1Wi3MbH5ll/KUY+i9oCj9kOas=",
+        "lastModified": 1787627355,
+        "narHash": "sha256-82GEkg50WqJ9Z+f6DJBCAHiDnuo6QZJRfDly7Wacsig=",
         "owner": "pbert5",
         "repo": "arbor-registry",
-        "rev": "9cabb855a4a9b2b169e254607664feb26b5947ed",
+        "rev": "0182a7e0e247e840313bfae833ef5392e0b3f5a7",
         "type": "github"
       },
       "original": {

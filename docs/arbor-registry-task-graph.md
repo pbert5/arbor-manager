@@ -22,9 +22,9 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DEPLOYMENT-MODEL | DONE | graph + Colmena research | research | planner/backend contract |
 | ROOT-REGISTRY-COMPOSITION | DONE | registry + manager outputs | lead; root flake | local component input and override wiring |
 | REGISTRY-MACHINE-SOURCE | DONE | registry + manager + machine model | manager | pure digest-requiring snapshot adapter |
-| MACHINE-SNAPSHOT-TOOLING | BLOCKED | registry source | future worker | inspect/export provenance |
-| OPENBAO-RUNTIME-IDENTITY | BLOCKED | secret boundary + registry | future worker | runtime identity module |
-| SYSTEMD-VAULTD-INTEGRATION | BLOCKED | secret boundary + research | future worker | thin NixOS binding module |
+| MACHINE-SNAPSHOT-TOOLING | DONE | registry source | manager; `packages/arbor-manager` | inspect/export provenance and digest checks |
+| OPENBAO-RUNTIME-IDENTITY | DONE | secret boundary + registry | registry; `packages/arbor-registry` | runtime identity generations and recovery boundary |
+| SYSTEMD-VAULTD-INTEGRATION | DONE (boundary) | secret boundary + research | registry; `packages/arbor-registry` | runtime credential binding module; upstream vaultd/OpenBao remain injected |
 | ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
 | NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
 | DEPLOY-PLANNER | DONE | deployment backend + selection | worker | plans/risk/acknowledgements |
@@ -33,6 +33,12 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DISTRIBUTED-SYSTEMS-REVIEW | DONE | integrated registry | reviewer + fixer | schema/lineage/cycle/idempotency findings fixed |
 | DEPLOYMENT-REVIEW | DONE | planner/backends | reviewer + fixer | ordering/cycle/backend/name findings fixed |
 | FINAL-VALIDATION | DONE | reviews + fixes | lead + integration-test | all-systems component/root checks and pure scenarios passed |
+| SOURCE-PRECEDENCE-MERGE | IN_PROGRESS | machine source + snapshot | worker; `packages/arbor-manager` | registry → local → session merge with provenance |
+| VAULT-BINDING-VALIDATION | DONE | vault runtime boundary | worker; `packages/arbor-registry` | binding and public-identifier assertions |
+| MULTI-NODE-RUNTIME-SCENARIO | IN_PROGRESS | runtime + recovery + manager | integration-test | root/parent/child/peer/standby scenario |
+| ARBOR-MANAGER-REMOTE | READY | manager source integration | lead | standalone `pbert5/arbor-manager` flake and root remote input |
+| ARBOR-REGISTRY-REMOTE-SYNC | READY | registry changes stabilized | lead | publish latest component and refresh root lock |
+| FINAL-GAP-AUDIT | READY | active implementation tasks | lead + reviewers | explicit incomplete-item and acceptance audit |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
