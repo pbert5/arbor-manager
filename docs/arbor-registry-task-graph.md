@@ -30,10 +30,10 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
 | DEPLOY-PLANNER | DONE | deployment backend + selection | worker | plans/risk/acknowledgements |
 | SECURITY-REVIEW | DONE | integrated implementation | reviewer | first review fixed MUST FIX findings |
-| NIX-REVIEW | IN_PROGRESS | integrated implementation | reviewer | final independent review |
-| DISTRIBUTED-SYSTEMS-REVIEW | IN_PROGRESS | integrated registry | reviewer | final independent review |
-| DEPLOYMENT-REVIEW | IN_PROGRESS | planner/backends | reviewer | final independent review |
-| FINAL-VALIDATION | IN_PROGRESS | reviews + fixes | lead + integration-test | clean-checkout checks and scenarios |
+| NIX-REVIEW | DONE | integrated implementation | reviewer | purity and store-boundary review; manager sanitization fixed |
+| DISTRIBUTED-SYSTEMS-REVIEW | DONE | integrated registry | reviewer + fixer | schema/lineage/cycle/idempotency findings fixed |
+| DEPLOYMENT-REVIEW | DONE | planner/backends | reviewer + fixer | ordering/cycle/backend/name findings fixed |
+| FINAL-VALIDATION | DONE | reviews + fixes | lead + integration-test | all-systems component/root checks and pure scenarios passed |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
