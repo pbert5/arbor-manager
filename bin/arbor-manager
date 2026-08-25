@@ -29,7 +29,7 @@ die() { echo "arbor-manager: $*" >&2; exit 2; }
 command=${1:-}
 shift || true
 action=$command
-if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; then
+if [ "$command" = network ] || [ "$command" = route ]; then
   subcommand=${1:-}
   shift || true
 fi

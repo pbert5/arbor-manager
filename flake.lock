@@ -1,6 +1,40 @@
 {
   "nodes": {
+    "arbor-network-manager": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1787687922,
+        "narHash": "sha256-+eUwOBH/My4/xA0r/IhFXyDoqO1MZCpoAisOrUo1P4Q=",
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "rev": "2ebc0af196182aa9b1e550405ed35ca9aa269ef6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
+      "locked": {
+        "lastModified": 1787498568,
+        "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "56c02bc00adcf003215cc4bd996d6efaf4cff188",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1787498568,
         "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
@@ -18,7 +52,8 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "arbor-network-manager": "arbor-network-manager",
+        "nixpkgs": "nixpkgs_2"
       }
     }
   },

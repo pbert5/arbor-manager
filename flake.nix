@@ -2,9 +2,10 @@
   description = "Arbor Manager: reusable static machine inventory to NixOS assembly";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.arbor-network-manager.url = "github:pbert5/arbor-network-manager";
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, arbor-network-manager, ... }:
     let
       systems = [
         "x86_64-linux"
@@ -294,6 +295,12 @@
           assert (import ./tests/source-merge.nix { inherit (nixpkgs) lib; });
           assert (import ./tests/colmena.nix { inherit (nixpkgs) lib; });
           (import nixpkgs { inherit system; }).emptyFile;
+        network-ssh-vm = import ./tests/network-ssh-vm.nix {
+          pkgs = import nixpkgs { inherit system; };
+          networkManagerPackage = arbor-network-manager.packages.${system}.default;
+          networkManagerModule = arbor-network-manager.nixosModules.default;
+          managerPackage = mkCli system;
+        };
       });
     };
 }
