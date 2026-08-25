@@ -111,7 +111,7 @@
                 }')
                 snapshot_digest=$(printf '%s' "$snapshot" | jq -cS '.snapshot' | sha256sum | cut -d' ' -f1)
                 snapshot=$(jq --arg digest "$snapshot_digest" '. + {snapshotDigest: $digest}' <<<"$snapshot")
-                acknowledgement_digest=$(printf '%s' "$snapshot" | jq -cS '{snapshotDigest, phases: .plan.phases, backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
+                acknowledgement_digest=$(printf '%s' "$snapshot" | jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
                 snapshot=$(jq --arg digest "$acknowledgement_digest" '.acknowledgement = {digest: $digest, token: ("arbor-manager/v1:" + .snapshotDigest + ":" + $digest)}' <<<"$snapshot")
                 digest=$(printf '%s' "$snapshot" | jq -cS 'del(.digest)' | sha256sum | cut -d' ' -f1)
                 jq --arg digest "$digest" '. + {digest: $digest}' <<<"$snapshot" > "$work/snapshot.json"
@@ -158,7 +158,7 @@
                 batch=$(jq -cS '.snapshot.selected = ["api", "api-2"] | .snapshot.nodes["api-2"] = .snapshot.nodes.api | .plan.phases = [{name: "canary", names: ["api"], commands: ["mock"]}, {name: "batches", names: [["api-2"]], commands: [["mock"]]}] | del(.snapshotDigest, .acknowledgement, .digest)' "$work/snapshot.json")
                 batch_snapshot_digest=$(printf '%s' "$batch" | jq -cS '.snapshot' | sha256sum | cut -d' ' -f1)
                 batch=$(jq --arg digest "$batch_snapshot_digest" '. + {snapshotDigest: $digest}' <<<"$batch")
-                batch_ack=$(printf '%s' "$batch" | jq -cS '{snapshotDigest, phases: .plan.phases, backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
+                batch_ack=$(printf '%s' "$batch" | jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
                 batch=$(jq --arg digest "$batch_ack" '.acknowledgement = {digest: $digest, token: ("arbor-manager/v1:" + .snapshotDigest + ":" + $digest)}' <<<"$batch")
                 batch_digest=$(printf '%s' "$batch" | jq -cS 'del(.digest)' | sha256sum | cut -d' ' -f1)
                 jq --arg digest "$batch_digest" '. + {digest: $digest}' <<<"$batch" > "$work/batch.json"

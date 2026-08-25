@@ -276,7 +276,7 @@ if [ "$command" = deployment-apply ]; then
   expected_ack=$(jq -r '.acknowledgement.digest // empty' <<<"$snapshot")
   expected_token=$(jq -r '.acknowledgement.token // empty' <<<"$snapshot")
   [ -n "$expected_ack" ] || refuse "snapshot has no immutable acknowledgement digest"
-  actual_plan_digest=$(jq -cS '{snapshotDigest, phases: .plan.phases, backend: .plan.backend}' <<<"$snapshot" | sha256sum | cut -d' ' -f1)
+  actual_plan_digest=$(jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' <<<"$snapshot" | sha256sum | cut -d' ' -f1)
   [ "$actual_plan_digest" = "$expected_ack" ] || refuse "immutable acknowledgement digest is inconsistent with the plan and snapshot"
   if [ "$acknowledgement" != "$expected_ack" ] && [ "$acknowledgement" != "$expected_token" ]; then
     refuse "acknowledgement does not match the immutable plan and snapshot (expected digest $expected_ack)"
