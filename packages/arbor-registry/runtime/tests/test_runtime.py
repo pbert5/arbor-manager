@@ -160,6 +160,26 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual([outcome["reason"] for outcome in outcomes], list(cases))
         self.assertEqual(self.runtime.accepted(), [])
 
+    def test_endpoint_credentials_embedded_in_urls_are_quarantined(self):
+        record = self.envelope(
+            "endpoint-url",
+            schema="endpoint",
+            payload={"address": "https://user:password@example.invalid/api"},
+        )
+        outcome = self.runtime.ingest([record])[0]
+        self.assertEqual(outcome["status"], "quarantined")
+        self.assertEqual(outcome["reason"], "unsafe-value")
+
+    def test_bearer_values_are_quarantined_even_without_secret_field_names(self):
+        record = self.envelope(
+            "endpoint-bearer",
+            schema="endpoint",
+            payload={"authorization": "Bearer runtime-secret"},
+        )
+        outcome = self.runtime.ingest([record])[0]
+        self.assertEqual(outcome["status"], "quarantined")
+        self.assertEqual(outcome["reason"], "unsafe-value")
+
     def test_conflicting_record_key_quarantines_both_variants(self):
         first = self.envelope("same")
         second = self.envelope("same", payload={"id": "different"})
