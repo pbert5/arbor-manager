@@ -18,9 +18,27 @@
         "type": "github"
       }
     },
+    "arbor-network-manager": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1787682393,
+        "narHash": "sha256-V5SRaMemrsF6gWqPDKUW2tBwaSfqIBMXHf7RK+CcKcg=",
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "rev": "9ab857b0a7984ebccf20ff89a8b7191f63d37a34",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbert5",
+        "repo": "arbor-network-manager",
+        "type": "github"
+      }
+    },
     "arbor-registry": {
       "inputs": {
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "systemd-vaultd": "systemd-vaultd"
       },
       "locked": {
@@ -297,6 +315,22 @@
     },
     "nixpkgs_3": {
       "locked": {
+        "lastModified": 1787498568,
+        "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "56c02bc00adcf003215cc4bd996d6efaf4cff188",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
         "lastModified": 1787360063,
         "narHash": "sha256-dt4WdcvsA8/RCe+VZZwqU0X+XMM3wBbGCWA0/sFWzGo=",
         "owner": "NixOS",
@@ -314,13 +348,14 @@
     "root": {
       "inputs": {
         "arbor-manager": "arbor-manager",
+        "arbor-network-manager": "arbor-network-manager",
         "arbor-registry": "arbor-registry",
         "ashes-desktop-apps": "ashes-desktop-apps",
         "ashes-tools": "ashes-tools",
         "ashzsh": "ashzsh",
         "flake-parts": "flake-parts_4",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_4",
         "tilingDesktop": "tilingDesktop"
       }
     },
