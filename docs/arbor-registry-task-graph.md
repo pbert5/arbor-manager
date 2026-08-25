@@ -61,6 +61,8 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | SECURITY-DEPLOYMENT-FIX-ROUND-2 | DONE | final security/deployment review | lead; registry runtime + manager CLI | HTTPS boundary, redacted unsafe quarantine, strict endpoint/receipt validation, process-group timeout, stable transport cursors |
 | REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `a9fa0de`, arbor-registry `f0cc69e`; root lock refreshed and normal remote checks passed |
 | UPSTREAM-VAULTD-VM | DONE (fixture) | upstream contract | integration-test; `packages/arbor-registry` | NixOS VM proves systemd-vaultd waits on the rendered JSON credential and delivers it through LoadCredential; it is not direct provider integration |
+| TRANSPORT-RECOVERY-TESTS | DONE | transport/runtime recovery | worker; `packages/arbor-registry` | three-daemon reconnect/replay convergence and out-of-order identity-generation recovery with stale approver rejection |
+| DEPLOYMENT-BOUNDARY-TESTS | DONE | deployment planning | worker; `packages/arbor-manager` | incompatible-target exclusion, Colmena canary/batch planning, failed receipts, resume validation, and backend identity |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
