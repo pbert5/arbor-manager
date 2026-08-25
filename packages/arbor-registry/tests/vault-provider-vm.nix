@@ -50,6 +50,8 @@ pkgs.testers.nixosTest {
             fi
             sleep 0.1
           done
+          ${pkgs.curl}/bin/curl --fail --silent http://127.0.0.1:8200/v1/sys/health >/dev/null \
+            || { echo 'OpenBao did not become ready' >&2; exit 1; }
           install -d -m 0700 /run/arbor-test
           printf '%s\n' arbor-test-root >/run/arbor-test/token
           chmod 0600 /run/arbor-test/token
