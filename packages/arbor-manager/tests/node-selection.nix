@@ -34,6 +34,7 @@ let
     };
   };
   g = manager.graph nodes;
+  fails = expression: !(builtins.tryEval (builtins.deepSeq expression true)).success;
   plan = manager.plan {
     inherit nodes;
     roots = [ "api" ];
@@ -93,12 +94,12 @@ assert
     {
       name = "canary";
       names = [ "api" ];
-      commands = [ "nixos-rebuild switch --flake .#api" ];
+      commands = [ "nixos-rebuild switch --flake '.#api'" ];
     }
     {
       name = "batches";
       names = [ [ "worker" ] ];
-      commands = [ [ "nixos-rebuild switch --flake .#worker" ] ];
+      commands = [ [ "nixos-rebuild switch --flake '.#worker'" ] ];
     }
   ];
 assert
@@ -111,4 +112,105 @@ assert
 assert plan.acknowledgement.digest != "";
 assert builtins.match ".*api.*" plan.inspect.names != null;
 assert builtins.match ".*worker.*" (builtins.head plan.inspect.commands) == null;
+let
+  reversed = {
+    z-parent = {
+      children = [ "a-child" ];
+    };
+    a-child = {
+      parents = [ "z-parent" ];
+    };
+  };
+  reversedPlan = manager.plan {
+    nodes = reversed;
+    roots = [ "z-parent" ];
+    selector = "accessible";
+    canary = "z-parent";
+  };
+  cyclePlan = manager.plan {
+    inherit nodes;
+    roots = [ "cycle-a" ];
+    selector = "accessible";
+  };
+  unsafeNodes = {
+    "bad;name" = { };
+  };
+in
+assert
+  reversedPlan.names == [
+    "z-parent"
+    "a-child"
+  ];
+assert
+  reversedPlan.phases == [
+    {
+      name = "canary";
+      names = [ "z-parent" ];
+      commands = [ "nixos-rebuild switch --flake '.#z-parent'" ];
+    }
+    {
+      name = "batches";
+      names = [ [ "a-child" ] ];
+      commands = [ [ "nixos-rebuild switch --flake '.#a-child'" ] ];
+    }
+  ];
+assert cyclePlan.names == [ ];
+assert
+  cyclePlan.selection.blocked == [
+    "cycle-a"
+    "cycle-b"
+  ];
+assert
+  (builtins.head (builtins.filter (entry: entry.name == "cycle-a") cyclePlan.selection.excluded))
+  .reasons == [ "cycle-blocked" ];
+assert fails (
+  manager.select {
+    inherit nodes;
+    roots = [ "missing" ];
+  }
+);
+assert fails (
+  manager.graph {
+    malformed = {
+      children = "not-a-list";
+    };
+  }
+);
+assert fails (
+  manager.plan {
+    inherit nodes;
+    roots = [ "api" ];
+    backend = "unknown";
+  }
+);
+assert fails (
+  manager.plan {
+    inherit nodes;
+    roots = [ "api" ];
+    canary = "missing";
+  }
+);
+assert fails (
+  manager.plan {
+    inherit nodes;
+    roots = [ "api" ];
+    batchSize = 0;
+  }
+);
+assert fails (
+  manager.plan {
+    nodes = {
+      invalid = {
+        state = "draining";
+      };
+    };
+    roots = [ "invalid" ];
+  }
+);
+assert fails (
+  manager.plan {
+    nodes = unsafeNodes;
+    roots = [ "bad;name" ];
+  }
+);
 true

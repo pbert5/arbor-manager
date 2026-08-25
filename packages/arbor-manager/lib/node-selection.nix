@@ -5,11 +5,26 @@ let
 
   namesOf = nodes: builtins.attrNames nodes;
 
-  members = value: if builtins.isList value then value else [ ];
+  relationField =
+    nodes: name: field:
+    let
+      value = nodes.${name}.${field} or [ ];
+    in
+    if !(builtins.isList value) then
+      throw "Arbor Manager: node '${name}' field '${field}' must be a list of node names."
+    else if !(builtins.all builtins.isString value) then
+      throw "Arbor Manager: node '${name}' field '${field}' must contain only strings."
+    else if !(builtins.all (target: builtins.hasAttr target nodes) value) then
+      let
+        unknown = builtins.filter (target: !(builtins.hasAttr target nodes)) value;
+      in
+      throw "Arbor Manager: node '${name}' field '${field}' references unknown node(s): ${lib.concatStringsSep ", " unknown}."
+    else
+      value;
 
-  declaredChildren = nodes: name: members (nodes.${name}.children or [ ]);
+  declaredChildren = nodes: name: relationField nodes name "children";
 
-  declaredParents = nodes: name: members (nodes.${name}.parents or [ ]);
+  declaredParents = nodes: name: relationField nodes name "parents";
 
   validNames = nodes: values: builtins.filter (name: builtins.hasAttr name nodes) values;
 
@@ -17,6 +32,25 @@ let
     nodes:
     let
       names = namesOf nodes;
+      validated = builtins.map (name: {
+        inherit name;
+        children = declaredChildren nodes name;
+        parents = declaredParents nodes name;
+        state =
+          let
+            state = nodes.${name}.state or "active";
+          in
+          if
+            builtins.elem state [
+              "active"
+              "standby"
+              "suspended"
+            ]
+          then
+            state
+          else
+            throw "Arbor Manager: node '${name}' has invalid state '${toString state}'.";
+      }) names;
       directChildren = name: validNames nodes (declaredChildren nodes name);
       directParents = name: validNames nodes (declaredParents nodes name);
       children =
@@ -32,9 +66,21 @@ let
           ++ builtins.filter (candidate: builtins.elem name (directChildren candidate)) names
         );
     in
-    {
+    builtins.deepSeq validated {
       inherit names children parents;
-      roots = values: validNames nodes (sortUnique values);
+      roots =
+        values:
+        if !(builtins.isList values) then
+          throw "Arbor Manager: roots must be a list of node names."
+        else if !(builtins.all builtins.isString values) then
+          throw "Arbor Manager: roots must contain only strings."
+        else if !(builtins.all (name: builtins.hasAttr name nodes) values) then
+          let
+            unknown = builtins.filter (name: !(builtins.hasAttr name nodes)) values;
+          in
+          throw "Arbor Manager: roots reference unknown node(s): ${lib.concatStringsSep ", " unknown}."
+        else
+          sortUnique values;
     };
 
   walk =
@@ -128,20 +174,47 @@ in
       graphValue = graph nodes;
       selectedByRelation = relation graphValue roots selector;
       options = { inherit allowStandby allowSuspended; };
+      ordered =
+        let
+          candidates = builtins.filter (name: stateReasons nodes.${name} options == [ ]) selectedByRelation;
+          parentsInSelection =
+            name: builtins.filter (parent: builtins.elem parent candidates) (graphValue.parents name);
+          go =
+            remaining: done:
+            let
+              ready = sortUnique (
+                builtins.filter (
+                  name:
+                  !(builtins.elem name done)
+                  && builtins.all (parent: builtins.elem parent done) (parentsInSelection name)
+                ) remaining
+              );
+            in
+            if ready == [ ] then { inherit done remaining; } else go remaining (done ++ ready);
+          result = go candidates [ ];
+        in
+        {
+          selected = result.done;
+          blocked = result.remaining;
+        };
+      selected = ordered.selected;
       excluded =
         builtins.map
           (name: {
             inherit name;
             reasons =
               (lib.optional (!(builtins.elem name selectedByRelation)) "outside-selector")
+              ++ (lib.optional (builtins.elem name ordered.blocked) "cycle-blocked")
               ++ stateReasons nodes.${name} options;
           })
           (
             builtins.filter (
-              name: !(builtins.elem name selectedByRelation) || stateReasons nodes.${name} options != [ ]
+              name:
+              !(builtins.elem name selectedByRelation)
+              || builtins.elem name ordered.blocked
+              || stateReasons nodes.${name} options != [ ]
             ) graphValue.names
           );
-      selected = builtins.filter (name: stateReasons nodes.${name} options == [ ]) selectedByRelation;
     in
     {
       inherit
@@ -150,6 +223,7 @@ in
         selected
         excluded
         ;
+      blocked = ordered.blocked;
       selector = selector;
       roots = graphValue.roots roots;
     };
