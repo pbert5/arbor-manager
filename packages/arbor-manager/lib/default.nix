@@ -159,12 +159,7 @@ let
         ;
       enabled = sanitized.enabled or true;
     }
-    // lib.optionalAttrs (builtins.hasAttr "hardware" sanitized) { inherit (sanitized) hardware; }
-    // lib.optionalAttrs (builtins.hasAttr "target" sanitized) { inherit (sanitized) target; }
-    // lib.optionalAttrs (builtins.hasAttr "targetHost" sanitized) { inherit (sanitized) targetHost; }
-    // lib.optionalAttrs (builtins.hasAttr "targetPort" sanitized) { inherit (sanitized) targetPort; }
-    // lib.optionalAttrs (builtins.hasAttr "targetUser" sanitized) { inherit (sanitized) targetUser; }
-    // lib.optionalAttrs (builtins.hasAttr "tags" sanitized) { inherit (sanitized) tags; };
+    // sanitized;
   # The intersection above is intentional: source records are data only.
   # Local modules are carried by the separate `modules` field on a source.
 
