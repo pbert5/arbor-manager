@@ -163,12 +163,13 @@ signatures remain unauthorized; suspension/severing preserve history; network
 reachability is not authorization; revoked identity generations do not
 resurrect; and local overrides do not silently alter security authority.
 
-The current extracted milestone implements pure envelope, graph,
-reconciliation, and declarative metadata fixtures only. It does not yet
-implement production cryptographic signers, OrbitDB/Helia transport, OpenBao
-runtime identity recovery, systemd-vaultd delivery, or live deployment. Those
-are follow-up integration tasks and must not be inferred from the pure
-library.
+The current extracted milestone also includes an optional runtime package
+with Ed25519 key storage, durable local ingestion, compatibility/lineage
+quarantine, and recovery metadata. Those runtime facilities are deliberately
+transport-provider and secret-provider neutral. It still does not claim a
+production OrbitDB/Helia adapter, live OpenBao or systemd-vaultd deployment,
+or live SSH/Colmena execution; those require separate executable integration
+tests and must not be inferred from the pure library or local runtime fixture.
 
 ## Migration classification
 

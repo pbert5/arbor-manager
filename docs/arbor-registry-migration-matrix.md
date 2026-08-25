@@ -3,19 +3,19 @@
 | Legacy Flake Devbox capability | New owner | New interface | Status | Notes |
 |---|---|---|---|---|
 | OrbitDB/libp2p/Helia transport | arbor-registry transport provider | append/fetch provider boundary | Contract only | Live OrbitDB adapter remains follow-up |
-| Signed registry events/canonical hashing | arbor-registry | typed envelope and signer interface | Pure fixture implemented | Production cryptographic signer remains follow-up |
-| Registry daemon/controller | arbor-registry runtime | accepted-state service boundary | Not extracted | Preserve transport-only/authority split |
+| Signed registry events/canonical hashing | arbor-registry | typed envelope and signer interface | Runtime signer implemented | Production key authority remains external |
+| Registry daemon/controller | arbor-registry runtime | accepted-state service boundary | Local runtime implemented | No production OrbitDB daemon yet |
 | Reconciliation and materialization | arbor-registry | `reconcile` raw→accepted→materialized | Implemented/tested | Legacy receipt/burn policy still incomplete |
 | Enrollment and membership | arbor-registry runtime | identity/relationship record families | Schema contract | Enrollment workflow remains follow-up |
-| Relationship graph | arbor-registry | signed relationship projection and graph queries | Implemented/tested | Recovery promotion/rebinding remains follow-up |
+| Relationship graph | arbor-registry | signed relationship projection and graph queries | Implemented/tested | Explicit peer-edge integration is active work |
 | Machine inventory | arbor-manager | `sources`/`machinesPath` normalized entries | Implemented/tested | Registry snapshot requires digest; merge policy is narrow |
 | Hardware configuration | trusted local composition | structured facts + local module selectors | Contract only | No executable Nix from registry |
 | Service/endpoint discovery | arbor-registry | accepted endpoint/name/service views | Implemented/tested | Network adapters remain external |
 | Secret release metadata | arbor-registry + OpenBao adapter | public policy/reference records | Contract only | No secret values in registry |
-| OpenBao authority and runtime identity | OpenBao integration | `cluster.vault` metadata + runtime provider | Not extracted | Identity generations/recovery are follow-up |
-| systemd-vaultd delivery | systemd-vaultd provider | NixOS credential binding contract | Not extracted | Upstream integration requires dedicated runtime tests |
+| OpenBao authority and runtime identity | OpenBao integration | `cluster.vault` metadata + runtime provider | Boundary + recovery model implemented | Live provider and approval verification remain follow-up |
+| systemd-vaultd delivery | systemd-vaultd provider | NixOS credential binding contract | Boundary implemented | Upstream readiness/rotation contract test remains active |
 | Receipts/audit | arbor-registry | receipt record family | Schema only | End-to-end receipt streams remain follow-up |
-| Cluster manager selectors | arbor-manager | pure graph selectors | Implemented/tested | No live CLI yet |
+| Cluster manager selectors | arbor-manager | pure graph selectors + offline CLI | Library implemented/tested | CLI implementation is active work |
 | Bulk deployment | arbor-manager + Colmena | pure deployment plan/backend contract | Implemented/tested | No live SSH/Colmena execution yet |
 | Fixed leader/follower roles | relationship graph | derived edge properties | Removed | Root machine records no longer declare roles |
 | Git/SSH/Radicle registry transport | none in steady state | migration-only compatibility | Intentionally dropped | Not authoritative in new architecture |
