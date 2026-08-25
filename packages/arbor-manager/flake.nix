@@ -61,6 +61,11 @@
               test "$(jq -r .endpoint.user <<<"$request")" = deploy
               jq -n --arg node "$(jq -r .node <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "succeeded", node: $node, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest, secret: "do-not-print"}'
             '';
+            failingBackend = pkgs.writeShellScript "arbor-manager-failing-backend" ''
+              set -euo pipefail
+              request=$(cat)
+              jq -n --arg node "$(jq -r .node <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "failed", node: $node, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest}'
+            '';
           in
           pkgs.runCommand "arbor-manager-cli-check"
             {
@@ -147,6 +152,8 @@
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} > "$work/applied.json" 2> "$work/backend-error"; then :; else cat "$work/backend-error"; cat "$work/applied.json"; exit 1; fi
                 jq -e '.status == "applied" and .applied == true and (.results | length) == 1 and .results[0].status == "succeeded" and .results[0].provider.status == "succeeded" and .results[0].provider.secret == "<redacted>"' "$work/applied.json"
                 if grep -q 'do-not-print' "$work/applied.json"; then exit 1; fi
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${failingBackend} > "$work/failed.json" 2> "$work/failed-error"; then exit 1; fi
+                jq -e '.status == "failed" and .applied == false and .results[0].error == "backend response did not confirm request identity or success"' "$work/failed.json"
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} --dry-run > "$work/dry-run.json"; then :; else exit 1; fi
                 touch "$out"
             '';
