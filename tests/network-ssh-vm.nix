@@ -70,6 +70,9 @@ pkgs.testers.runNixOSTest {
     print(source.execute("systemctl status arbor-networkd.service --no-pager"))
     print(source.execute("journalctl -u arbor-networkd.service --no-pager"))
     print(source.execute("ls -la /run /run/arbor /run/arbor-lan"))
+    print(source.execute("arbor-manager network endpoints --socket /run/arbor/networkd.sock"))
+    print(source.execute("arbor-manager network providers --socket /run/arbor/networkd.sock"))
+    print(source.execute("journalctl -u lan-provider.service --no-pager"))
     print(source.execute("arbor-manager route --socket /run/arbor/networkd.sock --source source --target target"))
     source.succeed("arbor-manager ssh --socket /run/arbor/networkd.sock --source source --target target --user root")
   '';
