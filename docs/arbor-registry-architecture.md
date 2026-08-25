@@ -180,13 +180,13 @@ with Ed25519 key storage, signed enrollment and recovery lifecycle records,
 generation/revocation enforcement, durable local ingestion,
 compatibility/lineage quarantine, live-tested OrbitDB transport, and
 live-tested OpenBao HTTP credential delivery with an initial-fetch gate and
-rotation watcher, plus a NixOS VM proving provider delivery and a separate
-fixture VM proving upstream systemd-vaultd credential delivery. The upstream
-fixture deliberately does not claim direct provider-to-vaultd composition:
-the pinned vaultd module consumes its own rendered JSON contract, so a future
-adapter must connect provider output to that contract before an end-to-end
-production path can be claimed. Real SSH/Colmena execution remains an
-external integration.
+rotation watcher. Provider bridge mode now atomically projects runtime files
+into the pinned upstream systemd-vaultd JSON contract; a NixOS VM proves the
+full initial OpenBao → provider → bridge → vaultd socket path. A separate
+fixture VM still covers the upstream vault-agent template contract. Bridge
+rotation is implemented through the watcher/restart path but remains a
+follow-up VM scenario. Real SSH/Colmena execution remains an external
+integration.
 
 ## Migration classification
 
