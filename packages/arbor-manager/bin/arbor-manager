@@ -184,12 +184,13 @@ run_direct_backend() {
       [ "$safe_request" = "$request" ] || refuse "deployment endpoint metadata for '$node_name' contains a secret-like value"
       request_file=$work/request-$phase-$node.json
       output_file=$work/output-$phase-$node.json
+      error_file=$work/error-$phase-$node.txt
       provider_file=$work/provider-$phase-$node.json
       result_file=$work/result-$phase-$node.json
       printf '%s\n' "$request" >"$request_file"
-      if (ulimit -f 1024; timeout --signal=TERM --kill-after=5 "${backend_timeout}s" env -i PATH="$PATH" HOME="${HOME:-/nonexistent}" ARBOR_MANAGER_BACKEND=direct "$backend_executable" <"$request_file" >"$output_file"); then
+      if (ulimit -f 1024; timeout --signal=TERM --kill-after=5 "${backend_timeout}s" env -i PATH="$PATH" HOME="${HOME:-/nonexistent}" ARBOR_MANAGER_BACKEND=direct "$backend_executable" <"$request_file" >"$output_file" 2>"$error_file"); then
         if jq -e -cS "$redact_filter | select(type == \"object\")" "$output_file" >"$provider_file" 2>/dev/null; then
-          if jq -e --arg node "$node_name" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$snapshot")" --arg acknowledgementDigest "$(jq -r .acknowledgement.digest <<<"$snapshot")" 'type == "object" and .status == "succeeded" and .node == $node and .snapshotDigest == $snapshotDigest and .acknowledgementDigest == $acknowledgementDigest' "$provider_file" >/dev/null; then
+          if jq -e --arg phase "$phase_name" --arg node "$node_name" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$snapshot")" --arg acknowledgementDigest "$(jq -r .acknowledgement.digest <<<"$snapshot")" --argjson endpoint "$(jq -c .endpoint "$request_file")" 'type == "object" and .status == "succeeded" and .phase == $phase and .node == $node and .endpoint == $endpoint and .snapshotDigest == $snapshotDigest and .acknowledgementDigest == $acknowledgementDigest' "$provider_file" >/dev/null; then
             jq -n -cS --arg phase "$phase_name" --arg node "$node_name" --slurpfile request "$request_file" --slurpfile provider "$provider_file" '{phase: $phase, node: $node, endpoint: $request[0].endpoint, status: "succeeded", provider: $provider[0]}' >"$result_file"
           else
             jq -n -cS --arg phase "$phase_name" --arg node "$node_name" '{phase: $phase, node: $node, status: "failed", error: "backend response did not confirm request identity or success"}' >"$result_file"
