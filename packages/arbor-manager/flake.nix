@@ -133,6 +133,7 @@
           assert !rejectedFunction.success;
           assert !rejectedDerivation.success;
           assert (import ./tests/node-selection.nix { inherit (nixpkgs) lib; });
+          assert (import ./tests/colmena.nix { inherit (nixpkgs) lib; });
           (import nixpkgs { inherit system; }).emptyFile;
       });
     };

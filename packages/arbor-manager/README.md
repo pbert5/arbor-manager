@@ -54,6 +54,15 @@ canonical snapshot and SHA-256 digest, backend recommendation (`direct` or
 digest, and copyable names/commands. The backend strings are interfaces only:
 Arbor Manager does not open SSH connections or execute Colmena.
 
+When a plan selects the Colmena backend, `lib.rawHive` projects the same
+resolved machine records into a raw Colmena hive. Only `plan.names` become
+nodes, so exclusions and an empty plan never imply apply-all. Node records may
+provide `targetHost`, `targetPort`, `targetUser` (or a `target` attrset) and
+`tags`; these become Colmena deployment metadata. `mkMachines` exposes
+`colmenaRawHive`, `colmenaSelection`, and `colmenaHive` only when its `inputs`
+contains a Colmena flake input. `colmenaHive` calls that input's `lib.makeHive`
+purely; it does not execute deployment.
+
 ```nix
 plan = lib.plan {
   nodes = inventory;

@@ -2,6 +2,7 @@
 let
   nodeSelection = import ./node-selection.nix { inherit lib; };
   deploymentPlan = import ./deployment-plan.nix { inherit lib nodeSelection; };
+  colmena = import ./colmena.nix { inherit lib; };
 
   publicMachineFields = [
     "identity"
@@ -19,6 +20,11 @@ let
     "services"
     "compatibility"
     "metadata"
+    "target"
+    "targetHost"
+    "targetPort"
+    "targetUser"
+    "tags"
   ];
 
   unsafeKey =
@@ -145,7 +151,12 @@ let
         precedence
         ;
       enabled = sanitized.enabled or true;
-    };
+    }
+    // lib.optionalAttrs (builtins.hasAttr "target" sanitized) { inherit (sanitized) target; }
+    // lib.optionalAttrs (builtins.hasAttr "targetHost" sanitized) { inherit (sanitized) targetHost; }
+    // lib.optionalAttrs (builtins.hasAttr "targetPort" sanitized) { inherit (sanitized) targetPort; }
+    // lib.optionalAttrs (builtins.hasAttr "targetUser" sanitized) { inherit (sanitized) targetUser; }
+    // lib.optionalAttrs (builtins.hasAttr "tags" sanitized) { inherit (sanitized) tags; };
   # The intersection above is intentional: source records are data only.
   # Local modules are carried by the separate `modules` field on a source.
 
@@ -267,6 +278,7 @@ in
 
   inherit (nodeSelection) graph selectors select;
   inherit (deploymentPlan) plan;
+  inherit (colmena) rawHive;
 
   mkMachines =
     {
@@ -275,6 +287,7 @@ in
       machinesPath ? null,
       profiles ? { },
       extraModules ? [ ],
+      deploymentPlanOverride ? null,
     }:
     let
       sourceEntries =
@@ -319,8 +332,34 @@ in
         }
       ) machines;
     in
+    let
+      colmenaOutput =
+        if !(builtins.hasAttr "colmena" inputs) then
+          { }
+        else
+          let
+            selectedPlan =
+              if deploymentPlanOverride != null then
+                deploymentPlanOverride
+              else
+                deploymentPlan.plan {
+                  nodes = builtins.mapAttrs (_: machine: machine.machine) machines;
+                  roots = [ ];
+                };
+            raw = colmena.rawHive {
+              inherit machines;
+              plan = selectedPlan;
+            };
+          in
+          {
+            colmenaRawHive = raw;
+            colmenaSelection = selectedPlan.names;
+            colmenaHive = inputs.colmena.lib.makeHive raw;
+          };
+    in
     {
       inherit configurations machines;
       machineNames = builtins.attrNames machines;
-    };
+    }
+    // colmenaOutput;
 }
