@@ -51,6 +51,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | VAULT-RUNTIME-TEST | DONE (mock + OpenBao HTTP + VM) | vault boundary | worker; `packages/arbor-registry` | initial readiness gate, restart-aware rotation, OpenBao delivery, real upstream socket credential test |
 | VAULT-PROVIDER-VM | DONE | vault runtime boundary | worker; `packages/arbor-registry` | NixOS VM proves OpenBao HTTP → arbor-openbao-provider delivery |
 | VAULT-PROVIDER-BRIDGE | DONE (initial path) | upstream vaultd boundary | worker; `packages/arbor-registry` | provider bridge groups credentials and proves OpenBao → provider → JSON contract → upstream vaultd socket; long-lived rotation VM remains follow-up |
+| VAULTD-BRIDGE-SECURITY | DONE | provider bridge review | lead + independent reviewer | runtime-root, symlink, private-file, restart-retry, and malformed-command hardening |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 | TRANSPORT-CONVERGENCE-FIX | DONE (bounded) | optional OrbitDB daemon | worker; registry transport/runtime | peer bootstrap, replicated indexing, cursor forwarding, atomic index writes |
