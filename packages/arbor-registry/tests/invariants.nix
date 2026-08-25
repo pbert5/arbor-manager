@@ -62,12 +62,16 @@ let
     };
     authorizedIssuers = [ "root" ];
   };
-  unauthorized = record {
+  unauthorized = registry.makeEnvelope childSigner {
+    recordId = "intruder";
+    generation = 1;
+    issuer = "child";
+    subject = "intruder";
     schema = "node-identity";
     payload = {
       id = "intruder";
+      aliases = [ ];
     };
-    issuer = "child";
   };
   unknown = registry.makeEnvelope signer {
     protocolEpoch = 1;
@@ -82,6 +86,29 @@ let
     schema = "future-record";
     payload = {
       id = "mystery";
+    };
+  };
+  unknownVersion = registry.makeEnvelope signer {
+    schemaVersion = 2;
+    recordId = "unknown-version";
+    generation = 1;
+    issuer = "root";
+    subject = "unknown-version";
+    schema = "node-identity";
+    payload = {
+      id = "unknown-version";
+      aliases = [ ];
+    };
+  };
+  malformedGeneration = registry.makeEnvelope signer {
+    generation = "1";
+    recordId = "malformed-generation";
+    issuer = "root";
+    subject = "malformed-generation";
+    schema = "node-identity";
+    payload = {
+      id = "malformed-generation";
+      aliases = [ ];
     };
   };
   cycle = [
@@ -99,10 +126,59 @@ let
   };
   newIdentity = record {
     schema = "node-identity";
+    predecessor = "node-identity:versioned";
     generation = 2;
     payload = {
       id = "versioned";
       aliases = [ "new" ];
+    };
+  };
+  lineageBase = record {
+    schema = "node-identity";
+    recordId = "lineage-base";
+    payload = {
+      id = "lineage-base";
+      aliases = [ ];
+    };
+  };
+  lineageChild = record {
+    schema = "node-identity";
+    recordId = "lineage-child";
+    generation = 2;
+    predecessor = "lineage-base";
+    payload = {
+      id = "lineage-child";
+      aliases = [ ];
+    };
+  };
+  unrelatedPredecessor = record {
+    schema = "node-identity";
+    recordId = "lineage-unrelated";
+    generation = 2;
+    predecessor = "not-in-history";
+    payload = {
+      id = "lineage-unrelated";
+      aliases = [ ];
+    };
+  };
+  forkA = record {
+    schema = "node-identity";
+    recordId = "lineage-fork-a";
+    generation = 2;
+    predecessor = "lineage-base";
+    payload = {
+      id = "lineage-fork-a";
+      aliases = [ ];
+    };
+  };
+  forkB = record {
+    schema = "node-identity";
+    recordId = "lineage-fork-b";
+    generation = 2;
+    predecessor = "lineage-base";
+    payload = {
+      id = "lineage-fork-b";
+      aliases = [ ];
     };
   };
   conflictA = record {
@@ -256,6 +332,18 @@ assert
       root = signer;
     };
   }).quarantine.code == "unknown-schema";
+assert
+  (registry.validateEnvelope {
+    record = unknownVersion;
+    signers.root = signer;
+  }).quarantine.code == "unsupported-schema-version";
+assert
+  (builtins.tryEval (
+    (registry.validateEnvelope {
+      record = malformedGeneration;
+      signers.root = signer;
+    }).quarantine.code
+  )).value == "malformed-record";
 assert graph.valid;
 assert elem "child-node" (
   registry.graphQuery {
@@ -269,6 +357,24 @@ assert
 assert
   (registry.validateGraph { relationships = registry.relationshipRecords selfCycle; }).cycles
   == [ "one" ];
+assert
+  (registry.reconcile {
+    raw = cycle;
+    signers.root = signer;
+  }).accepted == [ ];
+assert
+  (registry.reconcile {
+    raw = cycle;
+    signers.root = signer;
+  }).materialized.relationships == [ ];
+assert
+  (registry.reconcile {
+    raw = cycle;
+    signers.root = signer;
+  }).graph.cycles == [
+    "one"
+    "two"
+  ];
 assert
   (registry.reconcile {
     raw = [
@@ -339,6 +445,8 @@ assert
   ];
 assert provider.fetch { } == transport.fetch;
 assert (provider.append (identity "c")).fetch { } == transport.fetch ++ [ (identity "c") ];
+assert (transport.append (identity "a")).fetch == transport.fetch;
+assert (provider.append (identity "a")).fetch { } == provider.fetch { };
 assert
   projected.materialized.endpoints == [
     {
@@ -381,4 +489,43 @@ assert
     record = registry.makeEnvelope signer unsafe;
     signers.root = signer;
   }).quarantine.code == "unsafe-value";
+assert
+  (registry.reconcile {
+    raw = [
+      lineageBase
+      lineageChild
+    ];
+    signers.root = signer;
+  }).accepted == [
+    lineageBase
+    lineageChild
+  ];
+assert
+  (builtins.elemAt
+    (registry.reconcile {
+      raw = [ lineageChild ];
+      signers.root = signer;
+    }).quarantined
+    0
+  ).quarantine.code == "missing-predecessor";
+assert
+  (builtins.elemAt
+    (registry.reconcile {
+      raw = [
+        lineageBase
+        unrelatedPredecessor
+      ];
+      signers.root = signer;
+    }).quarantined
+    0
+  ).quarantine.code == "missing-predecessor";
+assert
+  (registry.reconcile {
+    raw = [
+      lineageBase
+      forkA
+      forkB
+    ];
+    signers.root = signer;
+  }).accepted == [ lineageBase ];
 pkgs.emptyFile
