@@ -166,15 +166,17 @@ run_direct_backend() {
       host: (.targetHost // .target.targetHost // .hostname // $name),
       port: (.targetPort // .target.targetPort // null),
       user: (.targetUser // .target.targetUser // null)
-    }) as $endpoint | ($endpoint.host | type == "string") and ($endpoint.port == null or ($endpoint.port | type == "number")) and ($endpoint.user == null or ($endpoint.user | type == "string"))))' <<<"$snapshot" >/dev/null || refuse "deployment phases reference nodes absent from or with invalid endpoint identity in the immutable snapshot"
+    }) as $endpoint | ($endpoint.host | type == "string" and length > 0 and test("^[A-Za-z0-9._:-]+$")) and ($endpoint.port == null or ($endpoint.port | type == "number" and floor == . and . >= 1 and . <= 65535)) and ($endpoint.user == null or ($endpoint.user | type == "string" and length > 0 and test("^[A-Za-z0-9._-]+$")))))' <<<"$snapshot" >/dev/null || refuse "deployment phases reference nodes absent from or with invalid endpoint identity in the immutable snapshot"
 
   if [ -n "$resume_file" ]; then
     [ -r "$resume_file" ] || refuse "cannot read resume receipt '$resume_file'"
-    jq -e --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$snapshot")" --arg acknowledgementDigest "$(jq -r .acknowledgement.digest <<<"$snapshot")" '
+    jq -e --slurpfile snapshot "$snapshot_file" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$snapshot")" --arg acknowledgementDigest "$(jq -r .acknowledgement.digest <<<"$snapshot")" '
       type == "object" and .format == "arbor-manager/deployment-receipt" and .version == 1
       and .snapshotDigest == $snapshotDigest and .acknowledgementDigest == $acknowledgementDigest
       and (.results | type == "array")
-      and all(.results[]; (.phase | type == "string") and (.node | type == "string") and (.status == "succeeded"))
+      and all(.results[]; (.phase | type == "string") and (.node | type == "string") and (.status == "succeeded") and (.provider | type == "object"))
+      and ([.results[] | (.phase + "\u0000" + .node)] | length == (unique | length))
+      and all(.results[]; . as $result | any($snapshot[0].plan.phases[]; .name == $result.phase and any(.names[]; (if type == "array" then .[] else . end) == $result.node)))
     ' "$resume_file" >/dev/null || refuse "resume receipt identity is not bound to this immutable snapshot and acknowledgement"
     resume_results=$(jq -c '.results' "$resume_file")
   else
@@ -222,8 +224,9 @@ run_direct_backend() {
       ' <<<"$snapshot")
       safe_request=$(jq -S -c "$redact_filter" <<<"$request")
       [ "$safe_request" = "$request" ] || refuse "deployment endpoint metadata for '$node_name' contains a secret-like value"
-      if jq -e --arg phase "$phase_name" --arg node "$node_name" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --argjson risk "$(jq -c .risk <<<"$request")" 'any(.[]; .phase == $phase and .node == $node and .status == "succeeded" and .endpoint == $endpoint and (.risk // {}) == $risk)' <<<"$resume_results" >/dev/null; then
-        results=$(jq -cS --arg phase "$phase_name" --arg node "$node_name" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --argjson risk "$(jq -c .risk <<<"$request")" '. + [{phase: $phase, node: $node, endpoint: $endpoint, risk: $risk, status: "succeeded", resumed: true}]' <<<"$results")
+      if jq -e --arg phase "$phase_name" --arg node "$node_name" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --argjson risk "$(jq -c .risk <<<"$request")" 'any(.[]; .phase == $phase and .node == $node and .status == "succeeded" and (.provider | type == "object") and .endpoint == $endpoint and (.risk // {}) == $risk)' <<<"$resume_results" >/dev/null; then
+        provider=$(jq -c --arg phase "$phase_name" --arg node "$node_name" 'map(select(.phase == $phase and .node == $node))[0].provider' <<<"$resume_results")
+        results=$(jq -cS --arg phase "$phase_name" --arg node "$node_name" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --argjson risk "$(jq -c .risk <<<"$request")" --argjson provider "$provider" '. + [{phase: $phase, node: $node, endpoint: $endpoint, risk: $risk, status: "succeeded", resumed: true, provider: $provider}]' <<<"$results")
         node=$((node + 1))
         continue
       fi
@@ -233,7 +236,7 @@ run_direct_backend() {
       provider_file=$work/provider-$phase-$node.json
       result_file=$work/result-$phase-$node.json
       printf '%s\n' "$request" >"$request_file"
-      if (ulimit -f 1024; timeout --signal=TERM --kill-after=5 "${backend_timeout}s" env -i PATH="$PATH" HOME="${HOME:-/nonexistent}" ARBOR_MANAGER_BACKEND=direct "$backend_executable" <"$request_file" >"$output_file" 2>"$error_file"); then
+      if (ulimit -f 1024; setsid timeout --signal=TERM --kill-after=5 "${backend_timeout}s" env -i PATH="$PATH" HOME="${HOME:-/nonexistent}" ARBOR_MANAGER_BACKEND="$backend_name" "$backend_executable" <"$request_file" >"$output_file" 2>"$error_file"); then
         if jq -e -cS "$redact_filter | select(type == \"object\")" "$output_file" >"$provider_file" 2>/dev/null; then
           if jq -e --arg backend "$backend_name" --arg phase "$phase_name" --arg node "$node_name" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$snapshot")" --arg acknowledgementDigest "$(jq -r .acknowledgement.digest <<<"$snapshot")" --argjson endpoint "$(jq -c .endpoint "$request_file")" --argjson risk "$(jq -c .risk "$request_file")" 'type == "object" and .status == "succeeded" and .backend == $backend and .phase == $phase and .node == $node and .endpoint == $endpoint and (.risk // {}) == $risk and .snapshotDigest == $snapshotDigest and .acknowledgementDigest == $acknowledgementDigest' "$provider_file" >/dev/null; then
             jq -n -cS --arg phase "$phase_name" --arg node "$node_name" --slurpfile request "$request_file" --slurpfile provider "$provider_file" '{phase: $phase, node: $node, endpoint: $request[0].endpoint, risk: $request[0].risk, status: "succeeded", provider: $provider[0]}' >"$result_file"
