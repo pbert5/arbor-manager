@@ -54,6 +54,10 @@ let
   canonical = value: toJSON value;
   recordKey = record: "${record.recordId}:${toString record.recordVersion}";
   issuerOf = record: get "issuer" null record;
+  isType = expected: value: typeOf value == expected;
+  isString = isType "string";
+  isInt = isType "int";
+  isNullableString = value: value == null || isString value;
 
   unsafeKeys = [
     "secret"
@@ -132,25 +136,46 @@ let
           "recordVersion"
           "generation"
           "schema"
+          "schemaVersion"
           "payload"
         ]
         && isAttrs record.payload;
       issuer = issuerOf record;
-      signer = signerFor signers issuer;
-      knownFamily = typeOf record == "set" && record ? schema && hasAttr record.schema supportedSchemas;
-      epochOK = get "protocolEpoch" null record == supportedEpoch;
-      wireOK = elem (get "wireVersion" null record) supportedWireVersions;
+      typedOK =
+        shapeOK
+        && isString record.recordId
+        && isInt record.recordVersion
+        && isInt record.generation
+        && record.generation >= 0
+        && isString record.schema
+        && isInt record.schemaVersion
+        && isInt (get "protocolEpoch" null record)
+        && isInt (get "wireVersion" null record)
+        && isList (get "requiredFeatures" [ ] record)
+        && isList (get "optionalFeatures" [ ] record)
+        && isNullableString (get "issuer" null record)
+        && isNullableString (get "subject" null record)
+        && isNullableString (get "predecessor" null record)
+        && isString (get "signature" "" record);
+      signer = if typedOK then signerFor signers issuer else null;
+      knownFamily = typedOK && hasAttr record.schema supportedSchemas;
+      schemaVersionOK = knownFamily && record.schemaVersion == supportedSchemas.${record.schema};
+      epochOK = typedOK && record.protocolEpoch == supportedEpoch;
+      wireOK = typedOK && elem record.wireVersion supportedWireVersions;
       required = get "requiredFeatures" [ ] record;
-      featuresOK = lib.all (feature: elem feature supportedFeatures) required;
-      authorityOK = authorizedIssuers == null || (issuer != null && elem issuer authorizedIssuers);
+      featuresOK =
+        isList required && lib.all (feature: isString feature && elem feature supportedFeatures) required;
+      authorityOK = authorizedIssuers == null || (isString issuer && elem issuer authorizedIssuers);
       safe = !containsUnsafe (unsigned record);
       signatureOK =
-        signer != null && signer.verify (canonical (unsigned record)) (get "signature" null record);
+        typedOK && signer != null && signer.verify (canonical (unsigned record)) record.signature;
       basic =
         framing.success
         && framing.value <= maxBytes
         && shapeOK
+        && typedOK
         && knownFamily
+        && schemaVersionOK
         && epochOK
         && wireOK
         && featuresOK;
@@ -158,10 +183,12 @@ let
       quarantineCode =
         if !framing.success || framing.value > maxBytes then
           "framing-limit"
-        else if !shapeOK then
+        else if !shapeOK || !typedOK then
           "malformed-record"
         else if !knownFamily then
           "unknown-schema"
+        else if !schemaVersionOK then
+          "unsupported-schema-version"
         else if !epochOK then
           "unknown-epoch"
         else if !wireOK then
@@ -198,12 +225,23 @@ let
           maxGeneration = lib.foldl' lib.max 0 generations;
           currentPeers = filter (x: x.generation == maxGeneration) peers;
           conflict = length (unique (map canonical currentPeers)) > 1;
+          predecessorRecord = findFirst (
+            x: x.recordId == record.predecessor && x.generation == record.generation - 1
+          ) null records;
           predecessorOK =
-            record.predecessor == null
-            || (record.predecessor != record.recordId && elem record.predecessor (map (x: x.recordId) records));
+            (record.predecessor == null && record.generation == 1)
+            || (predecessorRecord != null && predecessorRecord.generation + 1 == record.generation);
+          successors = filter (x: x.predecessor == record.predecessor) records;
+          fork = record.predecessor != null && length successors > 1;
           current = record.generation == maxGeneration;
         in
-        if !predecessorOK then
+        if fork then
+          {
+            inherit record;
+            accepted = false;
+            quarantine = reason "forked-lineage" "a predecessor has multiple successors";
+          }
+        else if !predecessorOK then
           {
             inherit record;
             accepted = false;
@@ -305,10 +343,29 @@ let
           filter (result: !result.accepted) envelopeResults
         ))
         ++ (map (result: result.record // { quarantine = result.quarantine; }) rejectedHistory);
+      graph = validateGraph { relationships = relationshipRecords accepted; };
+      cycleRecords = filter (
+        record:
+        record.schema == "relationship"
+        && elem record.payload.from graph.cycles
+        && elem record.payload.to graph.cycles
+      ) accepted;
+      cycleRecordIds = map (record: record.recordId) cycleRecords;
+      graphAccepted = filter (record: !elem record.recordId cycleRecordIds) accepted;
+      cycleQuarantined = map (
+        record:
+        record
+        // {
+          quarantine = reason "parent-cycle" "relationship participates in a parent cycle";
+        }
+      ) cycleRecords;
     in
     {
-      inherit raw accepted quarantined;
-      materialized = materialize accepted;
+      raw = raw;
+      accepted = graphAccepted;
+      quarantined = quarantined ++ cycleQuarantined;
+      inherit graph;
+      materialized = materialize graphAccepted;
     };
 
   relationshipRecords =
@@ -453,7 +510,9 @@ let
       ) records;
     in
     {
-      append = record: makeTransport (ordered ++ [ record ]);
+      append =
+        record:
+        makeTransport (ordered ++ optional (!(elem (recordKey record) (map recordKey ordered))) record);
       fetch = ordered;
       fetchRecords =
         {
@@ -473,7 +532,11 @@ let
       transport = makeTransport records;
     in
     {
-      append = record: makeDummyProvider (transport.fetch ++ [ record ]);
+      append =
+        record:
+        makeDummyProvider (
+          transport.fetch ++ optional (!(elem (recordKey record) (map recordKey transport.fetch))) record
+        );
       fetch = args: transport.fetchRecords args;
       snapshot = transport.snapshot;
     };
