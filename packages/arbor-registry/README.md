@@ -92,7 +92,8 @@ or store inputs. The executable does not start OpenBao in production: live
 integration uses an externally managed endpoint or injected adapter command.
 The package check also starts an isolated OpenBao dev server and verifies HTTP
 delivery, permissions, readiness, and a second rotation read; production auth
-and systemd-vaultd behavior remain external.
+and systemd-vaultd behavior is covered by the pinned upstream contract and VM
+checks; production auth remains external.
 
 Recovery authorization is deliberately stricter than ordinary envelope
 validation. Every approval must identify a trusted approver, role, and

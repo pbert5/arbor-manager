@@ -255,6 +255,6 @@ optional transport has an executable two-daemon convergence test, and the
 runtime provider has an executable OpenBao dev-server delivery test. Signed
 enrollment, identity-generation/revocation, recovery approvals, initial
 credential gating, and resumable deployment receipts are now runtime
-boundaries. Upstream systemd-vaultd socket behavior and real SSH/Colmena host
-execution remain external integrations. See [the architecture](docs/arbor-registry-architecture.md) and
+boundaries. A real NixOS VM now validates upstream systemd-vaultd socket delivery;
+real SSH/Colmena host execution remains an external integration. See [the architecture](docs/arbor-registry-architecture.md) and
 [the migration matrix](docs/arbor-registry-migration-matrix.md).
