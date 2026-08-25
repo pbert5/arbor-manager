@@ -113,13 +113,13 @@ if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; t
   edges=$(jq -c '.result.edges' <<<"$response")
   endpoint_for() {
     local node=$1 index=$2
-    jq -e --arg node "$node" --argjson index "$index" '
+    jq -e -c --arg node "$node" --argjson index "$index" '
       .result.observed[] | select(.node == $node and .generation == $index)
     ' <<<"$endpoints_response" 2>/dev/null | head -n1
   }
   accepted_for() {
     local node=$1 network=$2 provider=$3 generation=$4
-    jq -e --arg node "$node" --arg network "$network" --arg provider "$provider" --argjson generation "$generation" '
+    jq -e -c --arg node "$node" --arg network "$network" --arg provider "$provider" --argjson generation "$generation" '
       .result.accepted[] | select(.node == $node and .network == $network and .provider == $provider and .generation == $generation)
     ' <<<"$endpoints_response" 2>/dev/null | head -n1
   }
@@ -129,7 +129,7 @@ if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; t
   target_observation=$(endpoint_for "$target_node" "$(jq -r .endpoint_generation <<<"$target_edge")") || die "observed target endpoint is unavailable"
   target_address=$(jq -r '.address' <<<"$target_observation")
   target_port=$(jq -r '.port // empty' <<<"$target_observation")
-  target_key=$(jq -r '.sshHostKey // empty' <<<"$target_record")
+  target_key=$(jq -r '.sshHostKey // .ssh_host_key // empty' <<<"$target_record")
   [ -n "$target_key" ] || die "accepted target SSH host identity is unavailable"
   jumps=
   generated_hosts=$(mktemp)
@@ -145,7 +145,7 @@ if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; t
       jump_provider=$(jq -r '.provider' <<<"$jump_edge")
       jump_record=$(accepted_for "$jump_node" "$jump_network" "$jump_provider" "$jump_generation") || die "accepted jump endpoint is unavailable: $jump_node"
       jump_observation=$(endpoint_for "$jump_node" "$jump_generation") || die "observed jump endpoint is unavailable: $jump_node"
-      jump_key=$(jq -r '.sshHostKey // empty' <<<"$jump_record")
+      jump_key=$(jq -r '.sshHostKey // .ssh_host_key // empty' <<<"$jump_record")
       [ -n "$jump_key" ] || die "accepted jump SSH host identity is unavailable: $jump_node"
       jump_address=$(jq -r '.address' <<<"$jump_observation")
       printf '%s %s\n' "$jump_address" "$jump_key" >>"$generated_hosts"

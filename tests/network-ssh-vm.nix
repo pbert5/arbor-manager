@@ -7,6 +7,8 @@ pkgs.testers.runNixOSTest {
       networking.hostName = "target";
       networking.interfaces.eth1.ipv4.addresses = [{ address = "192.168.100.3"; prefixLength = 24; }];
       services.openssh.enable = true;
+      services.openssh.listenAddresses = [{ addr = "0.0.0.0"; port = 22; }];
+      networking.firewall.allowedTCPPorts = [ 22 ];
       networking.firewall.enable = true;
       networking.firewall.extraCommands = ''
         iptables -I nixos-fw 1 -p tcp --dport 22 -s 192.168.100.2 -j nixos-fw-accept
@@ -19,6 +21,8 @@ pkgs.testers.runNixOSTest {
       networking.hostName = "jump";
       networking.interfaces.eth1.ipv4.addresses = [{ address = "192.168.100.2"; prefixLength = 24; }];
       services.openssh.enable = true;
+      services.openssh.listenAddresses = [{ addr = "0.0.0.0"; port = 22; }];
+      networking.firewall.allowedTCPPorts = [ 22 ];
       users.users.root.openssh.authorizedKeys.keys = [ ];
     };
     source = { ... }: {
@@ -49,6 +53,7 @@ pkgs.testers.runNixOSTest {
     start_all()
     target.wait_for_unit("sshd.service")
     jump.wait_for_unit("sshd.service")
+    print(jump.execute("ss -lnt"))
     source.wait_for_unit("lan-provider.service")
     target_key = target.succeed("cat /etc/ssh/ssh_host_ed25519_key.pub").strip()
     jump_key = jump.succeed("cat /etc/ssh/ssh_host_ed25519_key.pub").strip()
@@ -69,11 +74,8 @@ pkgs.testers.runNixOSTest {
     source.succeed("systemctl restart arbor-networkd.service")
     source.wait_for_unit("arbor-networkd.service")
     source.sleep(3)
-    print(source.execute("systemctl status arbor-networkd.service --no-pager"))
-    print(source.execute("journalctl -u arbor-networkd.service --no-pager"))
-    print(source.execute("ls -la /run /run/arbor /run/arbor-lan"))
-    print(source.execute("arbor-manager network endpoints --socket /run/arbor/networkd.sock"))
-    print(source.execute("arbor-manager network providers --socket /run/arbor/networkd.sock"))
+    source.succeed("arbor-manager network status --socket /run/arbor/networkd.sock")
+    source.succeed("arbor-manager network providers --socket /run/arbor/networkd.sock")
     print(source.execute("journalctl -u lan-provider.service --no-pager"))
     print(source.execute("arbor-manager route --socket /run/arbor/networkd.sock --source source --target target"))
     source.succeed("arbor-manager ssh --socket /run/arbor/networkd.sock --source source --target target --user root")
