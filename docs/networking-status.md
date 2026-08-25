@@ -5,7 +5,7 @@ manager/runtime slice.
 
 ## Completed and promoted
 
-- Network Manager `3be9fc2`: strong accepted-endpoint parsing, explicit
+- Network Manager `2f551e4`: strong accepted-endpoint parsing, explicit
   graph-only compatibility parsing, accepted authority versus observations,
   target-aware reachability, capability-gated peer application, generation-
   bound execution bindings, JSON-lines Unix sockets, `arbor-networkd`, and a
@@ -23,7 +23,7 @@ manager/runtime slice.
 - Yggdrasil Private `7f0973c`: explicit dynamic-peer mode and provider service
   are integrated without removing the public/bootstrap sidecar or firewall
   controls.
-- Nix Arbor: remote inputs are refreshed and both provider modules
+- Nix Arbor `07e7710`: remote inputs are refreshed and both provider modules
   are exported.
 
 ## Remaining queue
