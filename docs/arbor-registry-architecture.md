@@ -164,6 +164,13 @@ signatures remain unauthorized; suspension/severing preserve history; network
 reachability is not authorization; revoked identity generations do not
 resurrect; and local overrides do not silently alter security authority.
 
+The current extracted milestone implements pure envelope, graph,
+reconciliation, and declarative metadata fixtures only. It does not yet
+implement production cryptographic signers, OrbitDB/Helia transport, OpenBao
+runtime identity recovery, systemd-vaultd delivery, or live deployment. Those
+are follow-up integration tasks and must not be inferred from the pure
+library.
+
 ## Migration classification
 
 Preserve signed canonical events, validation, reconciliation, accepted and
