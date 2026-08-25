@@ -29,6 +29,24 @@ values. `localSource ./config/machines` adapts the conventional directory
 layout, and `registrySnapshot { digest = "sha256:..."; machines = { name = record; }; }`
 adapts an immutable accepted snapshot. Registry snapshot entries contribute
 public data only; trusted executable modules are selected by local composition.
+The optional `hardware` field must contain exactly one data-only form:
+
+```nix
+hardware.snapshot = {
+  format = "arbor/hardware";
+  version = 1;
+  facts = { memoryBytes = 17179869184; cpu = "x86_64-v3"; };
+};
+# or hardware.artifact = {
+#   digest = "sha256:<64 lowercase hex characters>";
+#   mediaType = "application/vnd.arbor.hardware+json";
+# };
+```
+
+Hardware artifacts are references only; Arbor Manager does not fetch or
+evaluate them. `hardware.modules` and executable values are rejected. Local
+`hardware-configuration.nix` and `configuration.nix` modules remain explicit
+members of a local source.
 
 `sourceMerge` combines `registrySnapshot`, `committedLocal`, and an optional
 `sessionOverride` per machine field. The result has `sources`, `machines`, and
@@ -80,6 +98,27 @@ provide `targetHost`, `targetPort`, `targetUser` (or a `target` attrset) and
 `colmenaRawHive`, `colmenaSelection`, and `colmenaHive` only when its `inputs`
 contains a Colmena flake input. `colmenaHive` calls that input's `lib.makeHive`
 purely; it does not execute deployment.
+
+## Offline CLI
+
+The `arbor-manager` package and app provide inspection without evaluating a
+machine configuration or connecting to a host. They accept the immutable JSON
+written by `lib.snapshot.deploymentSnapshot`; the wrapper digest and embedded
+`snapshotDigest` are verified before any output is produced.
+
+```console
+$ nix run .#arbor-manager -- nodes list --snapshot deployment.json --scope selected
+api
+$ nix run .#arbor-manager -- machine inspect --snapshot deployment.json --name api
+$ nix run .#arbor-manager -- machine export --snapshot deployment.json --name api --format json
+$ nix run .#arbor-manager -- deployment-plan --snapshot deployment.json --format text
+```
+
+`nodes list` supports `all`, `local`, `selected`, `excluded`, `roots`,
+`children`, `descendants`, `parents`, `ancestors`, `peers`, and `accessible`
+scopes. Formats are `table`, `names`, `json`, `ssh`, and `colmena`; JSON is
+the default. `ssh` and `colmena` are display-only projections. The CLI is
+intentionally read-only and has no SSH, Colmena, or deployment execution path.
 
 ```nix
 plan = lib.plan {
