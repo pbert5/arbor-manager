@@ -6,11 +6,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787689711,
-        "narHash": "sha256-A3/0iHRy2WuDS1BOrQTIrmvnRcKf5TnLUg9gpi7qmjc=",
+        "lastModified": 1787689851,
+        "narHash": "sha256-BifxVr7lxQ8/0u3djm2FMt7kBC7EW7xwH7/k4rkkJNg=",
         "owner": "pbert5",
         "repo": "arbor-manager",
-        "rev": "309a970843daaa0dd7ace3cee3b47c76afac9e8f",
+        "rev": "a7a365dded1350e3c6ee55b7dcf70ac00f0c0a8d",
         "type": "github"
       },
       "original": {
@@ -24,11 +24,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1787689229,
-        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
+        "lastModified": 1787689823,
+        "narHash": "sha256-0TIOOT6KJQo23M0hqD+fhElmu1zAE5bOKGVN68rjtlw=",
         "owner": "pbert5",
         "repo": "arbor-network-manager",
-        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
+        "rev": "2f551e4def84777d976cd243eb1a470f7e4bf611",
         "type": "github"
       },
       "original": {
@@ -42,11 +42,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1787689229,
-        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
+        "lastModified": 1787689823,
+        "narHash": "sha256-0TIOOT6KJQo23M0hqD+fhElmu1zAE5bOKGVN68rjtlw=",
         "owner": "pbert5",
         "repo": "arbor-network-manager",
-        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
+        "rev": "2f551e4def84777d976cd243eb1a470f7e4bf611",
         "type": "github"
       },
       "original": {
@@ -60,11 +60,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1787689229,
-        "narHash": "sha256-MyVormWAGASDfPELDgVpVilDun9UcWnP8sTNv8odkIk=",
+        "lastModified": 1787689823,
+        "narHash": "sha256-0TIOOT6KJQo23M0hqD+fhElmu1zAE5bOKGVN68rjtlw=",
         "owner": "pbert5",
         "repo": "arbor-network-manager",
-        "rev": "3be9fc261587f89a6983a9fa6db60fad8cd34281",
+        "rev": "2f551e4def84777d976cd243eb1a470f7e4bf611",
         "type": "github"
       },
       "original": {
@@ -518,11 +518,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1787689756,
-        "narHash": "sha256-MhNbzG2gFXwdmHk9sFKi//Z5JfbDc1Q0n/7KgQ4CXgI=",
+        "lastModified": 1787689870,
+        "narHash": "sha256-W8oIKLYw1zRLyNFJQOsTlvqYg2nhX1CyaY4M73+g/VQ=",
         "ref": "main",
-        "rev": "7f0973cd79d3bc51f510fcf4d5d580f98918c9bb",
-        "revCount": 6,
+        "rev": "8543a1c0bac87553ba1ffb8c3d015303947f907d",
+        "revCount": 7,
         "type": "git",
         "url": "https://github.com/pbert5/yggdrasil-private.git"
       },
