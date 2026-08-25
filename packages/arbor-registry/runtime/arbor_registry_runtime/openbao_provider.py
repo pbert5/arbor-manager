@@ -57,7 +57,10 @@ def _read_token(token_file: Path) -> str:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) & 0o077:
             raise ValueError("OpenBao token file must be a non-symlink regular file with mode 0600")
-        token = os.read(fd, 64 * 1024).decode("utf-8").strip()
+        raw = os.read(fd, 64 * 1024 + 1)
+        if len(raw) > 64 * 1024:
+            raise ValueError("OpenBao token file is too large")
+        token = raw.decode("utf-8").strip()
     except UnicodeDecodeError as error:
         raise ValueError("OpenBao token file is malformed") from error
     finally:
@@ -201,7 +204,7 @@ def run(args: argparse.Namespace) -> int:
             _atomic_write(args.output, value)
             _mark_ready(args.ready, digest)
         if changed and args.restart_command:
-            result = subprocess.run(args.restart_command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
+            result = subprocess.run(args.restart_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=args.timeout)
             if result.returncode:
                 raise RuntimeError(f"restart command failed with exit status {result.returncode}")
         previous = digest

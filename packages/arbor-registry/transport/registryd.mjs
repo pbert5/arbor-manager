@@ -393,6 +393,8 @@ export function startSocketServer(daemon, socketPath, authorization = {}) {
     socket.on('error', () => clearTimeout(timer))
   })
   return fs.mkdir(path.dirname(socketPath), { recursive: true, mode: 0o750 }).then(async () => {
+    const parent = await fs.lstat(path.dirname(socketPath))
+    if (!parent.isDirectory() || parent.mode & 0o022 || (typeof process.getuid === 'function' && parent.uid !== process.getuid())) throw new Error('insecure socket parent permissions')
     try { if ((await fs.lstat(socketPath)).isSocket()) await fs.unlink(socketPath); else throw new Error('refusing to replace non-socket path') } catch (cause) { if (cause.code !== 'ENOENT') throw cause }
   }).then(() => new Promise((resolve, reject) => {
     server.once('error', reject)
