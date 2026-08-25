@@ -15,6 +15,8 @@ let
     toJSON
     typeOf
     tryEval
+    isAttrs
+    isList
     ;
   optional = condition: value: if condition then [ value ] else [ ];
   unique = values: foldl' (out: value: if elem value out then out else out ++ [ value ]) [ ] values;
@@ -26,7 +28,7 @@ let
     if hits == [ ] then fallback else head hits;
   get =
     name: fallback: attrs:
-    if hasAttr name attrs then attrs.${name} else fallback;
+    if isAttrs attrs && hasAttr name attrs then attrs.${name} else fallback;
 
   familyNames = [
     "node-identity"
@@ -37,7 +39,10 @@ let
     "hardware-snapshot"
     "configuration-intent"
     "endpoint"
+    "name"
     "service"
+    "trusted-peer"
+    "reachability"
     "compatibility"
     "recovery-authorization"
     "revocation"
@@ -45,10 +50,45 @@ let
   ];
   familySchemas = lib.genAttrs familyNames (_: 1);
 
-  unsigned = envelope: removeAttrs envelope [ "signature" ];
+  unsigned = envelope: if isAttrs envelope then removeAttrs envelope [ "signature" ] else { };
   canonical = value: toJSON value;
   recordKey = record: "${record.recordId}:${toString record.recordVersion}";
   issuerOf = record: get "issuer" null record;
+
+  unsafeKeys = [
+    "secret"
+    "password"
+    "passphrase"
+    "token"
+    "credential"
+    "privatekey"
+    "private-key"
+    "signingkey"
+    "signing-key"
+    "apikey"
+    "accesstoken"
+    "access-token"
+    "seed"
+  ];
+  unsafeKey = name: elem (lib.toLower name) unsafeKeys;
+  unsafeString =
+    value:
+    typeOf value == "string"
+    && (
+      lib.hasPrefix "/nix/store/" value
+      || lib.hasPrefix "/run/secrets/" value
+      || lib.hasPrefix "-----BEGIN" value
+    );
+  containsUnsafe =
+    value:
+    if unsafeString value then
+      true
+    else if isList value then
+      lib.any containsUnsafe value
+    else if isAttrs value then
+      lib.any (name: unsafeKey name || containsUnsafe value.${name}) (attrNames value)
+    else
+      false;
 
   signerFor =
     signers: issuer: if issuer != null && signers ? ${issuer} then signers.${issuer} else null;
@@ -85,6 +125,16 @@ let
     }:
     let
       framing = tryEval (stringLength (canonical record));
+      shapeOK =
+        isAttrs record
+        && lib.all (name: hasAttr name record) [
+          "recordId"
+          "recordVersion"
+          "generation"
+          "schema"
+          "payload"
+        ]
+        && isAttrs record.payload;
       issuer = issuerOf record;
       signer = signerFor signers issuer;
       knownFamily = typeOf record == "set" && record ? schema && hasAttr record.schema supportedSchemas;
@@ -93,14 +143,23 @@ let
       required = get "requiredFeatures" [ ] record;
       featuresOK = lib.all (feature: elem feature supportedFeatures) required;
       authorityOK = authorizedIssuers == null || (issuer != null && elem issuer authorizedIssuers);
+      safe = !containsUnsafe (unsigned record);
       signatureOK =
         signer != null && signer.verify (canonical (unsigned record)) (get "signature" null record);
       basic =
-        framing.success && framing.value <= maxBytes && knownFamily && epochOK && wireOK && featuresOK;
-      accepted = basic && authorityOK && signatureOK;
+        framing.success
+        && framing.value <= maxBytes
+        && shapeOK
+        && knownFamily
+        && epochOK
+        && wireOK
+        && featuresOK;
+      accepted = basic && authorityOK && signatureOK && safe;
       quarantineCode =
         if !framing.success || framing.value > maxBytes then
           "framing-limit"
+        else if !shapeOK then
+          "malformed-record"
         else if !knownFamily then
           "unknown-schema"
         else if !epochOK then
@@ -111,6 +170,8 @@ let
           "unsupported-required-feature"
         else if !authorityOK then
           "unauthorized-issuer"
+        else if !safe then
+          "unsafe-value"
         else if !signatureOK then
           "invalid-signature"
         else
@@ -135,7 +196,11 @@ let
           peers = byId.${record.recordId};
           generations = map (x: x.generation) peers;
           maxGeneration = lib.foldl' lib.max 0 generations;
-          predecessorOK = record.predecessor == null || elem record.predecessor (map (x: x.recordId) records);
+          currentPeers = filter (x: x.generation == maxGeneration) peers;
+          conflict = length (unique (map canonical currentPeers)) > 1;
+          predecessorOK =
+            record.predecessor == null
+            || (record.predecessor != record.recordId && elem record.predecessor (map (x: x.recordId) records));
           current = record.generation == maxGeneration;
         in
         if !predecessorOK then
@@ -143,6 +208,12 @@ let
             inherit record;
             accepted = false;
             quarantine = reason "missing-predecessor" "predecessor is not accepted";
+          }
+        else if conflict then
+          {
+            inherit record;
+            accepted = false;
+            quarantine = reason "conflicting-generation" "multiple records share an id and generation";
           }
         else if !current then
           {
@@ -163,11 +234,12 @@ let
     accepted:
     let
       byFamily = family: filter (record: record.schema == family) accepted;
+      ordered = values: lib.sortOn (value: toJSON value) values;
       identities = map (record: record.payload) (byFamily "node-identity");
       relationships = map (record: record.payload) (byFamily "relationship");
       latest =
         records:
-        map (id: unique (map (x: x.recordId) records)) (
+        map (
           id:
           findFirst (
             x:
@@ -175,11 +247,24 @@ let
             &&
               x.generation == lib.foldl' lib.max 0 (map (y: y.generation) (filter (y: y.recordId == id) records))
           ) null records
-        );
+        ) (unique (map (x: x.recordId) records));
     in
     {
       inherit identities relationships;
       records = latest accepted;
+      endpoints = ordered (map (record: record.payload) (byFamily "endpoint"));
+      names = ordered (
+        (map (record: record.payload) (byFamily "name"))
+        ++ (map (record: record.payload) (byFamily "node-identity"))
+      );
+      services = ordered (map (record: record.payload) (byFamily "service"));
+      trustedPeers = ordered (
+        (map (record: record.payload) (byFamily "trusted-peer"))
+        ++ (map (record: record.payload) (
+          filter (record: get "kind" null record.payload == "trusted-peer") (byFamily "relationship")
+        ))
+      );
+      reachability = ordered (map (record: record.payload) (byFamily "reachability"));
       provenance = map (record: {
         recordId = record.recordId;
         issuer = record.issuer;
@@ -264,9 +349,6 @@ let
     relationships:
     let
       graph = parentGraph relationships;
-      reaches =
-        from: _to:
-        elem from (concatLists (map (neighbor: reachable graph [ neighbor ]) (get from [ ] graph)));
       nodes = unique (
         concatLists (
           map (edge: [
@@ -275,8 +357,14 @@ let
           ]) (parentEdges relationships)
         )
       );
+      visit =
+        node: path:
+        if elem node path then
+          [ node ]
+        else
+          concatLists (map (neighbor: visit neighbor (path ++ [ node ])) (get node [ ] graph));
     in
-    filter (node: reaches node node) nodes;
+    unique (concatLists (map (node: visit node [ ]) nodes));
   graphQuery =
     {
       relationships,
@@ -367,7 +455,27 @@ let
     {
       append = record: makeTransport (ordered ++ [ record ]);
       fetch = ordered;
+      fetchRecords =
+        {
+          since ? null,
+          limit ? null,
+        }:
+        let
+          newer = if since == null then ordered else filter (record: recordKey record > since) ordered;
+        in
+        if limit == null then newer else builtins.take limit newer;
       snapshot = ordered;
+    };
+
+  makeDummyProvider =
+    records:
+    let
+      transport = makeTransport records;
+    in
+    {
+      append = record: makeDummyProvider (transport.fetch ++ [ record ]);
+      fetch = args: transport.fetchRecords args;
+      snapshot = transport.snapshot;
     };
 in
 {
@@ -381,6 +489,7 @@ in
     reconcile
     materialize
     makeTransport
+    makeDummyProvider
     relationshipRecords
     graphQuery
     validateGraph

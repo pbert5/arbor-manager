@@ -88,6 +88,37 @@ let
     (relationship "a" "one" "two" "parent" "active")
     (relationship "b" "two" "one" "parent" "active")
   ];
+  selfCycle = [ (relationship "self" "one" "one" "parent" "active") ];
+  oldIdentity = record {
+    schema = "node-identity";
+    generation = 1;
+    payload = {
+      id = "versioned";
+      aliases = [ "old" ];
+    };
+  };
+  newIdentity = record {
+    schema = "node-identity";
+    generation = 2;
+    payload = {
+      id = "versioned";
+      aliases = [ "new" ];
+    };
+  };
+  conflictA = record {
+    schema = "node-identity";
+    payload = {
+      id = "conflict";
+      aliases = [ "a" ];
+    };
+  };
+  conflictB = record {
+    schema = "node-identity";
+    payload = {
+      id = "conflict";
+      aliases = [ "b" ];
+    };
+  };
   standby = registry.relationshipRecords [
     (relationship "standby" "root-node" "standby-node" "standby-parent" "active")
   ];
@@ -142,6 +173,59 @@ let
     (identity "b")
     (identity "a")
   ];
+  provider = registry.makeDummyProvider [
+    (identity "b")
+    (identity "a")
+  ];
+  projected = registry.reconcile {
+    raw = [
+      (record {
+        schema = "endpoint";
+        payload = {
+          id = "endpoint-b";
+          node = "b";
+          protocol = "https";
+        };
+      })
+      (record {
+        schema = "service";
+        payload = {
+          id = "service-a";
+          endpoint = "endpoint-b";
+        };
+      })
+      (record {
+        schema = "name";
+        payload = {
+          id = "b";
+          name = "worker";
+        };
+      })
+      (record {
+        schema = "trusted-peer";
+        payload = {
+          id = "peer-a";
+          node = "b";
+        };
+      })
+      (record {
+        schema = "reachability";
+        payload = {
+          id = "reach-a";
+          subject = "endpoint-b";
+          state = "reachable";
+        };
+      })
+    ];
+    signers.root = signer;
+  };
+  unsafe = record {
+    schema = "service";
+    payload = {
+      id = "unsafe";
+      accessToken = "must-not-enter-state";
+    };
+  };
 in
 assert checked.quarantined == [ ];
 assert length checked.accepted == 3;
@@ -183,6 +267,51 @@ assert elem "child-node" (
 assert
   length (registry.validateGraph { relationships = registry.relationshipRecords cycle; }).cycles == 2;
 assert
+  (registry.validateGraph { relationships = registry.relationshipRecords selfCycle; }).cycles
+  == [ "one" ];
+assert
+  (registry.reconcile {
+    raw = [
+      oldIdentity
+      newIdentity
+    ];
+    signers.root = signer;
+  }).materialized.records == [ newIdentity ];
+assert
+  (registry.reconcile {
+    raw = [
+      conflictA
+      conflictB
+    ];
+    signers.root = signer;
+  }).quarantined == [
+    (
+      conflictA
+      // {
+        quarantine = {
+          code = "conflicting-generation";
+          detail = "multiple records share an id and generation";
+        };
+      }
+    )
+    (
+      conflictB
+      // {
+        quarantine = {
+          code = "conflicting-generation";
+          detail = "multiple records share an id and generation";
+        };
+      }
+    )
+  ];
+assert
+  (registry.validateEnvelope {
+    record = {
+      schema = "endpoint";
+    };
+    signers = { };
+  }).quarantine.code == "malformed-record";
+assert
   registry.graphQuery {
     relationships = standby;
     from = "root-node";
@@ -208,4 +337,48 @@ assert
     (identity "a")
     (identity "b")
   ];
+assert provider.fetch { } == transport.fetch;
+assert (provider.append (identity "c")).fetch { } == transport.fetch ++ [ (identity "c") ];
+assert
+  projected.materialized.endpoints == [
+    {
+      id = "endpoint-b";
+      node = "b";
+      protocol = "https";
+    }
+  ];
+assert
+  projected.materialized.names == [
+    {
+      id = "b";
+      name = "worker";
+    }
+  ];
+assert
+  projected.materialized.services == [
+    {
+      id = "service-a";
+      endpoint = "endpoint-b";
+    }
+  ];
+assert
+  projected.materialized.trustedPeers == [
+    {
+      id = "peer-a";
+      node = "b";
+    }
+  ];
+assert
+  projected.materialized.reachability == [
+    {
+      id = "reach-a";
+      state = "reachable";
+      subject = "endpoint-b";
+    }
+  ];
+assert
+  (registry.validateEnvelope {
+    record = registry.makeEnvelope signer unsafe;
+    signers.root = signer;
+  }).quarantine.code == "unsafe-value";
 pkgs.emptyFile

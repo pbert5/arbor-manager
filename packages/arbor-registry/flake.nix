@@ -12,13 +12,19 @@
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
       registry = import ./lib { lib = nixpkgs.lib; };
+      nixosModule = import ./modules/nixos.nix;
     in
     {
       lib = registry;
+      nixosModules.default = nixosModule;
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt-tree);
       checks = forAllSystems (system: {
         invariants = import ./tests/invariants.nix {
           inherit registry;
+          pkgs = import nixpkgs { inherit system; };
+        };
+        modules = import ./tests/modules.nix {
+          module = nixosModule;
           pkgs = import nixpkgs { inherit system; };
         };
       });
