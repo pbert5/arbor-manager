@@ -43,7 +43,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DEPLOYMENT-REVIEW-FIX | DONE | deployment review | worker; manager | topology-safe canaries and snapshot-bound Colmena projection |
 | RUNTIME-REVIEW-FIX | DONE | security/distributed review | worker; registry runtime | compatibility, lineage, malformed/conflict quarantine and locking |
 | SECURITY-BOUNDARY-FIX | DONE (model boundary) | security review | worker; registry/manager | recovery/vault identifiers, recursive protections, redacted inspection |
-| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; recovery, upstream systemd-vaultd, and real remote deployment remain external |
+| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; long-lived bridge rotation failure recovery, production auth/topology, multi-host recovery, and real remote deployment remain external |
 | ORBITDB-ADAPTER | DONE (optional daemon) | runtime Provider boundary | worker; `packages/arbor-registry/transport` | extracted OrbitDB/Helia daemon and executable two-daemon convergence test |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
 | ARBOR-CLI | DONE (offline + opt-in provider) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | inspect/list/export/plan and digest-bound direct provider execution |
