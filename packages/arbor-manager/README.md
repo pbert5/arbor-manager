@@ -88,7 +88,7 @@ strings.
 canonical snapshot and SHA-256 digest, backend recommendation (`direct` or
 `colmena`), critical-route and state risks, canary/batch phases, acknowledgement
 digest, and copyable names/commands. The backend strings are interfaces until
-an operator explicitly supplies a direct backend executable to the CLI. The
+an operator explicitly supplies a backend adapter executable to the CLI. The
 Nix library still never opens connections or executes Colmena.
 
 When a plan selects the Colmena backend, `lib.rawHive` projects the same
@@ -119,8 +119,9 @@ $ nix run .#arbor-manager -- deployment plan --snapshot deployment.json --format
 `nodes list` supports `all`, `local`, `selected`, `excluded`, `roots`,
 `children`, `descendants`, `parents`, `ancestors`, `peers`, and `accessible`
 scopes. Formats are `table`, `names`, `json`, `ssh`, and `colmena`; JSON is
-the default. `ssh` and `colmena` are display-only projections. Inspection and
-planning remain offline. `deployment plan` and `deployment apply --dry-run`
+the default. `ssh` and `colmena` are display projections; execution remains an
+explicit operator-supplied adapter. Inspection and planning remain offline.
+`deployment plan` and `deployment apply --dry-run`
 only display the immutable plan. A real `deployment apply` requires the digest (or
 token) in the deployment snapshot and an explicit backend executable:
 
@@ -129,17 +130,23 @@ $ nix run .#arbor-manager -- deployment apply --snapshot deployment.json \
     --acknowledgement <digest> --backend-executable ./my-deployer
 ```
 
-The executable is invoked once per node in each immutable plan phase, in phase
+The adapter is invoked once per node in each immutable plan phase, in phase
 order, with no shell interpretation. It receives JSON on stdin containing the
-snapshot and acknowledgement digests, phase, node, and endpoint metadata
+selected backend (`direct` or `colmena`), snapshot and acknowledgement digests,
+phase, node, risk, and endpoint metadata
 (`targetHost`, `targetPort`, and `targetUser`, with `hostname` as the host
 fallback). It must return a JSON object on stdout and use exit status zero for
 success. The CLI returns structured per-node results and treats a non-zero exit
 or invalid JSON as a failed node. It verifies the wrapper and snapshot digests,
 immutable plan phases, and acknowledgement before starting; phase names must
 be unique members of `snapshot.selected`. If no backend executable is
-supplied, apply retains an explicit refusal with exit status 3. No SSH or
-Colmena networking is built into the CLI.
+supplied, apply retains an explicit refusal with exit status 3. For a Colmena
+plan, the adapter is the operator-supplied wrapper that turns these verified
+requests into the desired `colmena apply` invocation; Arbor Manager does not
+treat Colmena as registry truth. No SSH or Colmena networking is built into the
+CLI. `--receipt FILE` writes resumable per-node results after each attempt;
+`--resume FILE` accepts only a receipt bound to the same snapshot and
+acknowledgement digests.
 
 ```nix
 plan = lib.plan {
