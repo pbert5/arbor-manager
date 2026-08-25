@@ -11,7 +11,11 @@
         "aarch64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-      lib = import ./lib { inherit (nixpkgs) lib; };
+      managerLib = import ./lib { inherit (nixpkgs) lib; };
+      snapshot = import ./lib/snapshot.nix { inherit (nixpkgs) lib; };
+      lib = managerLib // {
+        inherit snapshot;
+      };
     in
     {
       inherit lib;
@@ -133,6 +137,7 @@
           assert !rejectedFunction.success;
           assert !rejectedDerivation.success;
           assert (import ./tests/node-selection.nix { inherit (nixpkgs) lib; });
+          assert (import ./tests/snapshot.nix { inherit (nixpkgs) lib; });
           (import nixpkgs { inherit system; }).emptyFile;
       });
     };

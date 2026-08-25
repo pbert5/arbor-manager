@@ -30,6 +30,17 @@ layout, and `registrySnapshot { digest = "sha256:..."; machines = { name = recor
 adapts an immutable accepted snapshot. Registry snapshot entries contribute
 public data only; trusted executable modules are selected by local composition.
 
+## Machine and deployment snapshots
+
+`lib.snapshot` provides pure inspection and export helpers. `inspectMachine`
+accepts a resolved `mkMachines` entry or a record and returns source and
+per-field provenance. `exportMachine` and `exportDeployment` produce
+deterministic canonical JSON, while `digest` hashes that JSON. Secret-like
+fields, runtime strings, paths, functions, derivations, and functors become
+`<redacted>` before serialization, so exports contain no executable Nix or
+secret material. Registry snapshots remain immutable data inputs: they supply
+no modules; trusted executable code comes only from local composition.
+
 For compatibility, `machinesPath = ./config/machines` remains an alias for
 the local adapter. Local directories contain `default.nix` (facts), and may
 contain `hardware-configuration.nix` and `configuration.nix` modules.
