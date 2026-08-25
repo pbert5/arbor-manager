@@ -47,7 +47,7 @@ let
     backend = "direct";
   };
 in
-assert manager.selection plan == [ "api" ];
+assert plan.names == [ "api" ];
 assert !(builtins.hasAttr "worker" hive);
 assert !(builtins.hasAttr "excluded" hive);
 assert
