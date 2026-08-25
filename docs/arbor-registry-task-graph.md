@@ -24,7 +24,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | REGISTRY-MACHINE-SOURCE | DONE | registry + manager + machine model | manager | pure digest-requiring snapshot adapter |
 | MACHINE-SNAPSHOT-TOOLING | DONE | registry source | manager; `packages/arbor-manager` | inspect/export provenance and digest checks |
 | OPENBAO-RUNTIME-IDENTITY | DONE | secret boundary + registry | registry; `packages/arbor-registry` | runtime identity generations and recovery boundary |
-| SYSTEMD-VAULTD-INTEGRATION | DONE (boundary) | secret boundary + research | registry; `packages/arbor-registry` | runtime credential binding module; upstream vaultd/OpenBao remain injected |
+| SYSTEMD-VAULTD-INTEGRATION | DONE | secret boundary + research | registry; `packages/arbor-registry` | runtime credential binding module plus pinned upstream OpenBao/systemd-vaultd VM adapter |
 | ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
 | NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
 | DEPLOY-PLANNER | DONE | deployment backend + selection | worker | plans/risk/acknowledgements |
@@ -41,11 +41,11 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DEPLOYMENT-REVIEW-FIX | DONE | deployment review | worker; manager | topology-safe canaries and snapshot-bound Colmena projection |
 | RUNTIME-REVIEW-FIX | DONE | security/distributed review | worker; registry runtime | compatibility, lineage, malformed/conflict quarantine and locking |
 | SECURITY-BOUNDARY-FIX | DONE (model boundary) | security review | worker; registry/manager | recovery/vault identifiers, recursive protections, redacted inspection |
-| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; live OrbitDB/OpenBao/systemd-vaultd/CLI execution remains explicitly incomplete |
+| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; live OrbitDB/CLI execution remains incomplete; OpenBao/systemd-vaultd has an opt-in VM check |
 | ORBITDB-ADAPTER | DONE (contract) | runtime Provider boundary | worker; `packages/arbor-registry/runtime` | legacy transport audit and bounded provider/adapter contract; live OrbitDB remains follow-up |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
 | ARBOR-CLI | DONE (offline) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan CLI; no live execution |
-| VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; no live OpenBao |
+| VAULT-RUNTIME-TEST | DONE | vault boundary | worker; `packages/arbor-registry` | pure contract plus opt-in OpenBao/systemd-vaultd readiness/rotation/no-leakage VM |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 

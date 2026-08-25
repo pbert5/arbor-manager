@@ -1,10 +1,14 @@
 {
   description = "Arbor Registry: pure signed-record reconciliation and graph library";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systemd-vaultd.url = "github:numtide/systemd-vaultd";
+    systemd-vaultd.inputs.nixpkgs.follows = "nixpkgs";
+  };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, systemd-vaultd, ... }:
     let
       systems = [
         "x86_64-linux"
@@ -14,6 +18,7 @@
       registry = import ./lib { lib = nixpkgs.lib; };
       nixosModule = import ./modules/nixos.nix;
       vaultRuntimeModule = import ./modules/vault-runtime.nix;
+      vaultRuntimeSystemdVaultdModule = import ./modules/vault-runtime-systemd-vaultd.nix;
     in
     {
       lib = registry;
@@ -31,7 +36,16 @@
       nixosModules = {
         default = nixosModule;
         vault-runtime = vaultRuntimeModule;
+        vault-runtime-systemd-vaultd = vaultRuntimeSystemdVaultdModule;
       };
+      nixosTests = forAllSystems (system: {
+        vault-runtime-openbao = import ./tests/vault-runtime-openbao.nix {
+          pkgs = import nixpkgs { inherit system; };
+          inherit systemd-vaultd;
+          arborVaultRuntimeModule = vaultRuntimeModule;
+          arborVaultRuntimeSystemdVaultdModule = vaultRuntimeSystemdVaultdModule;
+        };
+      });
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt-tree);
       checks = forAllSystems (system: {
         invariants = import ./tests/invariants.nix {

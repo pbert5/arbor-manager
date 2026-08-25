@@ -142,8 +142,10 @@ reattaches relationships only through signed recovery authorization.
 Registry service/endpoint records expose names, protocols, addresses,
 reachability metadata, and policy references. They never expose secret
 values. OpenBao Agent plus systemd-vaultd provides credentials through native
-systemd credentials; rotation uses restart or an explicitly refresh-safe
-mechanism because `LoadCredential` is immutable for a running process.
+systemd credentials; the optional `packages/arbor-registry` NixOS test
+exercises this path with runtime-generated AppRole material and restart on
+rotation. Rotation uses restart or an explicitly refresh-safe mechanism
+because `LoadCredential` is immutable for a running process.
 
 ## Manager/deployment boundary
 
@@ -171,10 +173,10 @@ resurrect; and local overrides do not silently alter security authority.
 The current extracted milestone also includes an optional runtime package
 with Ed25519 key storage, durable local ingestion, compatibility/lineage
 quarantine, and recovery metadata. Those runtime facilities are deliberately
-transport-provider and secret-provider neutral. It still does not claim a
-production OrbitDB/Helia adapter, live OpenBao or systemd-vaultd deployment,
-or live SSH/Colmena execution; those require separate executable integration
-tests and must not be inferred from the pure library or local runtime fixture.
+transport-provider and secret-provider neutral. It does not claim a production
+OrbitDB/Helia adapter or live SSH/Colmena execution. The separately pinned
+OpenBao/systemd-vaultd NixOS test is an executable provider integration check,
+not a claim that every deployment has production identity provisioning.
 
 ## Migration classification
 
