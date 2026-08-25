@@ -41,12 +41,12 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | DEPLOYMENT-REVIEW-FIX | DONE | deployment review | worker; manager | topology-safe canaries and snapshot-bound Colmena projection |
 | RUNTIME-REVIEW-FIX | DONE | security/distributed review | worker; registry runtime | compatibility, lineage, malformed/conflict quarantine and locking |
 | SECURITY-BOUNDARY-FIX | DONE (model boundary) | security review | worker; registry/manager | recovery/vault identifiers, recursive protections, redacted inspection |
-| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; cross-peer OrbitDB, live vault delivery, and remote deployment remain unverified |
-| ORBITDB-ADAPTER | DONE (optional daemon) | runtime Provider boundary | worker; `packages/arbor-registry/transport` | extracted OrbitDB/Helia daemon and socket contract; cross-peer replication remains unverified |
+| FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; recovery, upstream systemd-vaultd, and real remote deployment remain external |
+| ORBITDB-ADAPTER | DONE (optional daemon) | runtime Provider boundary | worker; `packages/arbor-registry/transport` | extracted OrbitDB/Helia daemon and executable two-daemon convergence test |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
-| ARBOR-CLI | DONE (offline) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan/apply gate; no live execution |
-| DEPLOYMENT-ACK-EXECUTION | DONE (offline gate) | deployment planner + CLI | worker; `packages/arbor-manager` | digest-bound acknowledgement and dry-run gate; remote execution remains external |
-| VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; live VM attempt not retained as evidence |
+| ARBOR-CLI | DONE (offline + opt-in provider) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | inspect/list/export/plan and digest-bound direct provider execution |
+| DEPLOYMENT-ACK-EXECUTION | DONE (opt-in direct provider) | deployment planner + CLI | worker; `packages/arbor-manager` | immutable plan/ack checks and mocked backend execution; no real host contacted |
+| VAULT-RUNTIME-TEST | DONE (mock + OpenBao HTTP) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract plus OpenBao dev-server delivery test |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 | TRANSPORT-CONVERGENCE-FIX | DONE (bounded) | optional OrbitDB daemon | worker; registry transport/runtime | peer bootstrap, replicated indexing, cursor forwarding, atomic index writes |

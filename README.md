@@ -250,8 +250,9 @@ root flake consumes the independent `github:pbert5/arbor-registry` input; use
 Nix evaluation consumes immutable snapshots and never queries a live registry.
 Nix/Git contains construction logic, Arbor Registry contains mutable public
 cluster knowledge, OpenBao owns privileged runtime authority and secret values,
-and Arbor Manager creates inspectable source/selection/deployment plans. Live
-OrbitDB, OpenBao identity recovery, systemd-vaultd delivery, and SSH/Colmena
-execution are intentionally follow-up integrations, not claims of this pure
-milestone. See [the architecture](docs/arbor-registry-architecture.md) and
+and Arbor Manager creates inspectable source/selection/deployment plans. The
+optional transport has an executable two-daemon convergence test, and the
+runtime provider has an executable OpenBao dev-server delivery test. OpenBao
+identity recovery, upstream systemd-vaultd behavior, and real SSH/Colmena
+deployment remain external integrations. See [the architecture](docs/arbor-registry-architecture.md) and
 [the migration matrix](docs/arbor-registry-migration-matrix.md).

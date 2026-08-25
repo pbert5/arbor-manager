@@ -2,8 +2,10 @@
 
 This document freezes the initial extraction boundary for `arbor-registry` and
 its integration with `arbor-manager`. It is deliberately a small, inspectable
-foundation; live transport and privileged credential delivery remain runtime
-concerns.
+foundation; transport and privileged credential delivery remain runtime
+concerns. The repository includes executable tests for two-daemon
+OrbitDB/Helia convergence and OpenBao HTTP credential delivery; upstream
+systemd-vaultd and remote deployment remain injected concerns.
 
 ## Ownership
 
@@ -173,12 +175,9 @@ resurrect; and local overrides do not silently alter security authority.
 
 The current extracted milestone also includes an optional runtime package
 with Ed25519 key storage, durable local ingestion, compatibility/lineage
-quarantine, and recovery metadata. Those runtime facilities are deliberately
-transport-provider and secret-provider neutral. It still does not claim
-cross-peer OrbitDB convergence, live OpenBao/systemd-vaultd credential
-delivery,
-or live SSH/Colmena execution; those require separate executable integration
-tests and must not be inferred from the pure library or local runtime fixture.
+quarantine, recovery metadata, live-tested OrbitDB transport, and live-tested
+OpenBao HTTP credential delivery. Upstream systemd-vaultd behavior and real
+SSH/Colmena execution remain external integrations.
 
 ## Migration classification
 

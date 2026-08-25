@@ -119,9 +119,9 @@ $ nix run .#arbor-manager -- deployment plan --snapshot deployment.json --format
 `nodes list` supports `all`, `local`, `selected`, `excluded`, `roots`,
 `children`, `descendants`, `parents`, `ancestors`, `peers`, and `accessible`
 scopes. Formats are `table`, `names`, `json`, `ssh`, and `colmena`; JSON is
-the default. `ssh` and `colmena` are display-only projections. The CLI is
-intentionally offline. `deployment plan` and `deployment apply --dry-run` only
-display the immutable plan. A real `deployment apply` requires the digest (or
+the default. `ssh` and `colmena` are display-only projections. Inspection and
+planning remain offline. `deployment plan` and `deployment apply --dry-run`
+only display the immutable plan. A real `deployment apply` requires the digest (or
 token) in the deployment snapshot and an explicit backend executable:
 
 ```console

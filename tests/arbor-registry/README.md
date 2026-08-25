@@ -53,13 +53,15 @@ cleanup step.
 
 ## Missing live capabilities
 
-These are not claimed by this harness and require separate executable
-integration tests:
+These are not claimed by this pure Nix harness; separate executable checks
+cover the transport and OpenBao HTTP provider where noted:
 
-- production OrbitDB/Helia transport, peer discovery, network partitions, and
-  signed live replication;
-- live OpenBao authorization, secret rotation, systemd-vaultd credentials,
-  and proof that secret values never cross the runtime boundary;
+- production OrbitDB/Helia topology policy, network partitions, and
+  signed live replication beyond the repository's two-daemon convergence
+  check;
+- OpenBao authorization policy, production auth, systemd-vaultd credentials,
+  and proof under a real NixOS service manager; the package check exercises
+  OpenBao dev-server HTTP delivery and rotation reads;
 - real SSH or `nixos-rebuild` execution, Colmena invocation, host reachability,
   canary acknowledgement, rollback, and deployment receipts;
 - cryptographic verification of recovery approvals in the pure recovery model;
