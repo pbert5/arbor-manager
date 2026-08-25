@@ -60,7 +60,7 @@
               test "$(jq -r .endpoint.port <<<"$request")" = 2222
               test "$(jq -r .endpoint.user <<<"$request")" = deploy
               printf '%s\n' "$request" >>"$MOCK_LOG"
-              jq -n --arg node "$(jq -r .node <<<"$request")" '{status: "mock-ok", node: $node}'
+              jq -n --arg node "$(jq -r .node <<<"$request")" '{status: "mock-ok", node: $node, secret: "do-not-print"}'
             '';
           in
           pkgs.runCommand "arbor-manager-cli-check"
@@ -146,7 +146,8 @@
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" 2>"$work/no-backend"; then exit 1; fi
                 grep -q 'no deployment backend configured' "$work/no-backend"
                 if MOCK_LOG="$work/mock.log" ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} > "$work/applied.json" 2> "$work/backend-error"; then :; else cat "$work/backend-error"; cat "$work/applied.json"; exit 1; fi
-                jq -e '.status == "applied" and .applied == true and (.results | length) == 1 and .results[0].status == "succeeded" and .results[0].provider.status == "mock-ok"' "$work/applied.json"
+                jq -e '.status == "applied" and .applied == true and (.results | length) == 1 and .results[0].status == "succeeded" and .results[0].provider.status == "mock-ok" and .results[0].provider.secret == "<redacted>"' "$work/applied.json"
+                if grep -q 'do-not-print' "$work/applied.json"; then exit 1; fi
                 test "$(wc -l < "$work/mock.log")" -eq 1
                 before_dry_run=$(wc -l < "$work/mock.log")
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} --dry-run > "$work/dry-run.json"; then :; else exit 1; fi
