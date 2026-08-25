@@ -1,6 +1,8 @@
 { inputs, ... }:
 let
+  networkPolicy = import ./networks.nix;
   desktop = [
+    networkPolicy
     inputs.home-manager.nixosModules.home-manager
     inputs.tilingDesktop.nixosModules.default
     inputs.ashes-desktop-apps.nixosModules.default
@@ -34,6 +36,7 @@ let
     }
   ];
   server = [
+    networkPolicy
     {
       system.stateVersion = "26.05";
       services.openssh.enable = true;
