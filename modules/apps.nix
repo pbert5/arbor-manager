@@ -40,8 +40,8 @@ _: {
           declare -a overrides=()
           collect_overrides() {
             local index component_input component_local_path component_checkout
-            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps tilingDesktop arbor-manager)
-            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps packages/tiling-desktop packages/arbor-manager)
+            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps tilingDesktop arbor-manager arbor-registry)
+            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps packages/tiling-desktop packages/arbor-manager packages/arbor-registry)
             for index in "''${!component_inputs[@]}"; do
               component_input="''${component_inputs[$index]}"
               component_local_path="''${component_paths[$index]}"
@@ -55,9 +55,9 @@ _: {
                     print_overrides() {
             printf '%s\n' "Local flake overrides:"
             local index component_input component_local_path component_checkout
-            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps tilingDesktop arbor-manager)
-            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps packages/tiling-desktop packages/arbor-manager)
-            local -a component_remotes=(github:pbert5/AshZsh github:pbert5/AshesTools github:pbert5/AshDesktopApps github:pbert5/TilingDesktop path:./packages/arbor-manager)
+            local -a component_inputs=(ashzsh ashes-tools ashes-desktop-apps tilingDesktop arbor-manager arbor-registry)
+            local -a component_paths=(packages/AshZsh packages/AshesTools packages/AshDesktopApps packages/tiling-desktop packages/arbor-manager packages/arbor-registry)
+            local -a component_remotes=(github:pbert5/AshZsh github:pbert5/AshesTools github:pbert5/AshDesktopApps github:pbert5/TilingDesktop path:./packages/arbor-manager github:pbert5/arbor-registry)
             for index in "''${!component_inputs[@]}"; do
               component_input="''${component_inputs[$index]}"
               component_local_path="''${component_paths[$index]}"

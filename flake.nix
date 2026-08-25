@@ -20,6 +20,10 @@
       inputs.home-manager.follows = "home-manager";
     };
     arbor-manager.url = "path:./packages/arbor-manager";
+    # The standalone component is local while the dedicated remote repository
+    # is being established. Keep the input boundary identical to the eventual
+    # github:pbert5/arbor-registry input.
+    arbor-registry.url = "path:./packages/arbor-registry";
   };
 
   outputs =
