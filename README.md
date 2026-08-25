@@ -238,3 +238,21 @@ TilingDesktop, AshZsh, and Ash Desktop Apps; r640-0 uses the conservative SSH
 server profile. Legacy cluster state, dynamic enrollment, large media/storage
 services, NVIDIA tuning, and user-specific application lists are intentionally
 omitted.
+
+## Arbor Registry boundary
+
+The standalone `packages/arbor-registry` component owns pure signed-record
+validation, accepted/materialized projections, quarantine, relationship graph
+queries, endpoint/service metadata, and declarative public policy options. The
+root flake consumes it through a local component input while the dedicated
+remote repository is being established; use `nix run .#local -- overrides` to
+inspect all component overrides.
+
+Nix evaluation consumes immutable snapshots and never queries a live registry.
+Nix/Git contains construction logic, Arbor Registry contains mutable public
+cluster knowledge, OpenBao owns privileged runtime authority and secret values,
+and Arbor Manager creates inspectable source/selection/deployment plans. Live
+OrbitDB, OpenBao identity recovery, systemd-vaultd delivery, and SSH/Colmena
+execution are intentionally follow-up integrations, not claims of this pure
+milestone. See [the architecture](docs/arbor-registry-architecture.md) and
+[the migration matrix](docs/arbor-registry-migration-matrix.md).

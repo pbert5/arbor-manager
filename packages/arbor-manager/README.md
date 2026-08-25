@@ -26,7 +26,9 @@ Each source entry has `name` and `record`, and may provide `modules`,
 `provenance`, and numeric `precedence`. Records retain `cluster` (including
 any relationship fields) as data; Arbor Manager does not prescribe role
 values. `localSource ./config/machines` adapts the conventional directory
-layout, and `registrySnapshot { name = record; }` adapts a pure snapshot.
+layout, and `registrySnapshot { digest = "sha256:..."; machines = { name = record; }; }`
+adapts an immutable accepted snapshot. Registry snapshot entries contribute
+public data only; trusted executable modules are selected by local composition.
 
 For compatibility, `machinesPath = ./config/machines` remains an alias for
 the local adapter. Local directories contain `default.nix` (facts), and may
