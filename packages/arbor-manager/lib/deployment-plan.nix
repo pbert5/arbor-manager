@@ -9,6 +9,25 @@ let
 
   jsonDigest = value: builtins.hashString "sha256" (builtins.toJSON value);
 
+  validateTargetName =
+    name:
+    if builtins.match "^[A-Za-z0-9._-]+$" name == null then
+      throw "Arbor Manager: node name '${name}' is unsafe for deployment commands."
+    else
+      name;
+
+  validateBackend =
+    backend:
+    if
+      builtins.elem backend [
+        "direct"
+        "colmena"
+      ]
+    then
+      backend
+    else
+      throw "Arbor Manager: unknown deployment backend '${toString backend}'.";
+
   riskFor =
     nodes: selected:
     let
@@ -41,7 +60,7 @@ let
     nodes: selected: requested:
     if requested != null then
       {
-        backend = requested;
+        backend = validateBackend requested;
         reason = "Explicit backend choice.";
       }
     else if selected == [ ] then
@@ -63,9 +82,9 @@ let
   commandFor =
     backend: name:
     if backend == "colmena" then
-      "colmena apply --on ${name}"
+      "colmena apply --on '${name}'"
     else
-      "nixos-rebuild switch --flake .#${name}";
+      "nixos-rebuild switch --flake '.#${name}'";
 
 in
 {
@@ -90,16 +109,30 @@ in
           allowSuspended
           ;
       };
-      selected = selection.selected;
+      selected = builtins.deepSeq (map validateTargetName selection.selected) selection.selected;
+      validBatchSize =
+        if !(builtins.isInt batchSize) || batchSize <= 0 then
+          throw "Arbor Manager: batchSize must be a positive integer."
+        else
+          batchSize;
+      checkedCanary =
+        if canary == null then
+          null
+        else if !(builtins.isString canary) then
+          throw "Arbor Manager: canary must be a node name or null."
+        else if !(builtins.elem canary selected) then
+          throw "Arbor Manager: canary '${canary}' is not in the deployable selection."
+        else
+          canary;
       chosenCanary =
-        if canary != null && builtins.elem canary selected then
-          [ canary ]
+        if checkedCanary != null then
+          [ checkedCanary ]
         else if selected != [ ] then
           [ (builtins.head selected) ]
         else
           [ ];
       remaining = builtins.filter (name: !(builtins.elem name chosenCanary)) selected;
-      batches = chunks (if batchSize > 0 then batchSize else 1) remaining;
+      batches = chunks validBatchSize remaining;
       recommendation = backendRecommendation nodes selected backend;
       phases =
         (lib.optional (chosenCanary != [ ]) {
@@ -132,23 +165,27 @@ in
         commands = lib.concatMap (phase: phase.commands) phases;
       };
     in
-    {
-      inherit
-        selection
-        snapshot
-        snapshotDigest
-        phases
-        acknowledgement
-        ;
-      backend = recommendation;
-      risks = riskFor nodes selected;
-      names = selected;
-      commands = acknowledgement.commands;
-      inspect = {
-        snapshotDigest = snapshotDigest;
-        acknowledgementDigest = acknowledgement.digest;
-        names = acknowledgement.names;
-        commands = acknowledgement.commands;
-      };
-    };
+    builtins.seq validBatchSize (
+      builtins.seq checkedCanary (
+        builtins.seq recommendation.backend {
+          inherit
+            selection
+            snapshot
+            snapshotDigest
+            phases
+            acknowledgement
+            ;
+          backend = recommendation;
+          risks = riskFor nodes selected;
+          names = selected;
+          commands = acknowledgement.commands;
+          inspect = {
+            snapshotDigest = snapshotDigest;
+            acknowledgementDigest = acknowledgement.digest;
+            names = acknowledgement.names;
+            commands = acknowledgement.commands;
+          };
+        }
+      )
+    );
 }
