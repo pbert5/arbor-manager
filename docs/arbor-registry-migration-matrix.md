@@ -12,8 +12,8 @@
 | Hardware configuration | trusted local composition | structured facts + local module selectors | Contract only | No executable Nix from registry |
 | Service/endpoint discovery | arbor-registry | accepted endpoint/name/service views | Implemented/tested | Network adapters remain external |
 | Secret release metadata | arbor-registry + OpenBao adapter | public policy/reference records | Contract only | No secret values in registry |
-| OpenBao authority and runtime identity | OpenBao integration | `cluster.vault` metadata + runtime provider | Boundary + executable AppRole test | Production identity provisioning and approval verification remain external |
-| systemd-vaultd delivery | systemd-vaultd provider | NixOS credential binding adapter | Boundary + executable readiness/rotation/no-leak test | Upstream module remains a pinned external input |
+| OpenBao authority and runtime identity | OpenBao integration | `cluster.vault` metadata + runtime provider | Boundary + recovery model implemented | Live provider and approval verification remain follow-up |
+| systemd-vaultd delivery | systemd-vaultd provider | NixOS credential binding contract | Boundary implemented | Upstream readiness/rotation contract test remains active |
 | Receipts/audit | arbor-registry | receipt record family | Schema only | End-to-end receipt streams remain follow-up |
 | Cluster manager selectors | arbor-manager | pure graph selectors + offline CLI | Library implemented/tested | CLI implementation is active work |
 | Bulk deployment | arbor-manager + Colmena | pure deployment plan/backend contract | Implemented/tested | No live SSH/Colmena execution yet |
