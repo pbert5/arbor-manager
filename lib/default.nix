@@ -44,6 +44,7 @@ let
       "privatekey"
       "signingkey"
       "apikey"
+      "accesskey"
       "apitoken"
       "accesstoken"
       "seed"
