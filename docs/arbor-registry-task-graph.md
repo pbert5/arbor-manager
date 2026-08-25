@@ -13,26 +13,27 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | GRAPH-MODEL | DONE | — | architecture | relationship and SCC invariants |
 | COMPATIBILITY-MODEL | DONE | — | architecture | envelope/quarantine rules |
 | ARCHITECTURE-SYNTHESIS | DONE | six discovery tasks | lead | frozen boundary in `docs/arbor-registry-architecture.md` |
-| EXTRACT-ARBOR-REGISTRY | IN_PROGRESS | audit + synthesis | worker; `packages/arbor-registry` | standalone registry library/flake |
-| REGISTRY-RECONCILIATION | IN_PROGRESS | extraction + graph + compatibility | same worker scope | accepted/materialized state and tests |
-| MANAGER-SOURCE-ABSTRACTION | IN_PROGRESS | manager audit + synthesis | worker; `packages/arbor-manager` | pure source API and role removal |
-| SECRET-BOUNDARY-MODEL | IN_PROGRESS | audit + vault research | research | runtime-only identity/secret brief |
-| MACHINE-RECORD-MODEL | IN_PROGRESS | manager audit + synthesis | research | normalized source/merge contract |
-| NETWORK-INTERFACE-MODEL | IN_PROGRESS | graph + machine contract | research | provider-neutral runtime API |
-| DEPLOYMENT-MODEL | IN_PROGRESS | graph + Colmena research | research | planner/backend contract |
-| ROOT-REGISTRY-COMPOSITION | BLOCKED | registry + manager outputs | lead/worker; root flake | inputs, overrides, exports, checks |
-| REGISTRY-MACHINE-SOURCE | BLOCKED | registry + manager + machine model | future worker | immutable snapshot adapter |
+| EXTRACT-ARBOR-REGISTRY | DONE | audit + synthesis | worker; `packages/arbor-registry` | standalone registry library/flake |
+| REGISTRY-RECONCILIATION | DONE | extraction + graph + compatibility | worker scope | accepted/materialized state, quarantine and tests |
+| MANAGER-SOURCE-ABSTRACTION | DONE | manager audit + synthesis | worker; `packages/arbor-manager` | pure source API, role removal, read-only metadata |
+| SECRET-BOUNDARY-MODEL | DONE | audit + vault research | research | runtime-only identity/secret brief |
+| MACHINE-RECORD-MODEL | DONE | manager audit + synthesis | research | normalized source/merge contract |
+| NETWORK-INTERFACE-MODEL | DONE | graph + machine contract | research | provider-neutral runtime API |
+| DEPLOYMENT-MODEL | DONE | graph + Colmena research | research | planner/backend contract |
+| ROOT-REGISTRY-COMPOSITION | DONE | registry + manager outputs | lead; root flake | local component input and override wiring |
+| REGISTRY-MACHINE-SOURCE | DONE | registry + manager + machine model | manager | pure digest-requiring snapshot adapter |
+| MACHINE-SNAPSHOT-TOOLING | BLOCKED | registry source | future worker | inspect/export provenance |
 | MACHINE-SNAPSHOT-TOOLING | BLOCKED | registry source | future worker | inspect/export provenance |
 | OPENBAO-RUNTIME-IDENTITY | BLOCKED | secret boundary + registry | future worker | runtime identity module |
 | SYSTEMD-VAULTD-INTEGRATION | BLOCKED | secret boundary + research | future worker | thin NixOS binding module |
-| ENDPOINT-SERVICE-REGISTRY | BLOCKED | network model + registry | future worker | endpoints/services/runtime views |
-| NODE-SELECTION | BLOCKED | registry source + graph | future worker | selectors and copyable output |
-| DEPLOY-PLANNER | BLOCKED | deployment backend + selection | future worker | plans/risk/acknowledgements |
-| SECURITY-REVIEW | BLOCKED | integrated implementation | reviewer | adversarial findings |
-| NIX-REVIEW | BLOCKED | integrated implementation | nix specialist | purity/store/flakes review |
-| DISTRIBUTED-SYSTEMS-REVIEW | BLOCKED | integrated registry | reviewer | convergence/replay review |
-| DEPLOYMENT-REVIEW | BLOCKED | planner/backends | reviewer | deployment safety review |
-| FINAL-VALIDATION | BLOCKED | reviews + fixes | lead | clean-checkout flake checks and scenarios |
+| ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
+| NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
+| DEPLOY-PLANNER | DONE | deployment backend + selection | worker | plans/risk/acknowledgements |
+| SECURITY-REVIEW | DONE | integrated implementation | reviewer | first review fixed MUST FIX findings |
+| NIX-REVIEW | IN_PROGRESS | integrated implementation | reviewer | final independent review |
+| DISTRIBUTED-SYSTEMS-REVIEW | IN_PROGRESS | integrated registry | reviewer | final independent review |
+| DEPLOYMENT-REVIEW | IN_PROGRESS | planner/backends | reviewer | final independent review |
+| FINAL-VALIDATION | IN_PROGRESS | reviews + fixes | lead + integration-test | clean-checkout checks and scenarios |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
