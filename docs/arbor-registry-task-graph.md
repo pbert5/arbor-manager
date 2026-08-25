@@ -23,7 +23,6 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | ROOT-REGISTRY-COMPOSITION | DONE | registry + manager outputs | lead; root flake | local component input and override wiring |
 | REGISTRY-MACHINE-SOURCE | DONE | registry + manager + machine model | manager | pure digest-requiring snapshot adapter |
 | MACHINE-SNAPSHOT-TOOLING | BLOCKED | registry source | future worker | inspect/export provenance |
-| MACHINE-SNAPSHOT-TOOLING | BLOCKED | registry source | future worker | inspect/export provenance |
 | OPENBAO-RUNTIME-IDENTITY | BLOCKED | secret boundary + registry | future worker | runtime identity module |
 | SYSTEMD-VAULTD-INTEGRATION | BLOCKED | secret boundary + research | future worker | thin NixOS binding module |
 | ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
