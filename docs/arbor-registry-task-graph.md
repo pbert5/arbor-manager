@@ -56,8 +56,9 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | TRANSPORT-LOCK-OWNERSHIP-FIX | DONE | post-fix distributed/security review | worker; `packages/arbor-registry/transport` | ownership-safe stale takeover, heartbeat, and old-owner release tests |
 | PROVIDER-EXECUTION-HARDENING | DONE | security review | lead; registry runtime + manager CLI | bounded/timed provider commands, contained backend stderr, full backend response identity |
 | TRANSPORT-REPLAY-RECOVERY-HARDENING | DONE | distributed review | lead; registry transport | duplicate-event convergence, unreadable-record cursor retry, bounded quarantine, private state permissions |
-| FINAL-POSTFIX-REVIEW | DONE | provider/transport hardening | independent security + distributed reviewers | no MUST-fix findings; token/restart/socket-parent SHOULD hardening also applied |
-| REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `4279a1e`, arbor-registry `128d50f`; root lock refreshed and normal remote checks passed |
+| FINAL-POSTFIX-REVIEW | REVIEW | provider/transport hardening | independent security + Nix reviewers | round-2 MUST findings fixed locally; post-promotion review pending |
+| SECURITY-DEPLOYMENT-FIX-ROUND-2 | DONE | final security/deployment review | lead; registry runtime + manager CLI | HTTPS boundary, redacted unsafe quarantine, strict endpoint/receipt validation, process-group timeout, stable transport cursors |
+| REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `a8faaec`, arbor-registry `57d06c8`; root lock refreshed and normal remote checks passed |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
