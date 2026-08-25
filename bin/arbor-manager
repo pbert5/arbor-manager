@@ -7,6 +7,7 @@ usage() {
 Usage:
   arbor-manager network status|providers|endpoints|snapshot --socket FILE [--format json|text]
   arbor-manager route --socket FILE --source NODE --target NODE [--capability CAPABILITY]
+  arbor-manager ssh --socket FILE --source NODE --target NODE --user USER [--known-hosts FILE]
   arbor-manager machine export --snapshot FILE --name NODE [--format json|text]
   arbor-manager machine inspect --snapshot FILE --name NODE [--format json|text]
   arbor-manager nodes list --snapshot FILE
@@ -28,7 +29,7 @@ die() { echo "arbor-manager: $*" >&2; exit 2; }
 command=${1:-}
 shift || true
 action=$command
-if [ "$command" = network ] || [ "$command" = route ]; then
+if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; then
   subcommand=${1:-}
   shift || true
 fi
@@ -58,6 +59,8 @@ network_socket=
 source_node=
 target_node=
 capability=ssh
+ssh_user=
+known_hosts_file=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -75,26 +78,89 @@ while [ "$#" -gt 0 ]; do
     --source) [ "$#" -ge 2 ] || die "--source requires a node"; source_node=$2; shift 2 ;;
     --target) [ "$#" -ge 2 ] || die "--target requires a node"; target_node=$2; shift 2 ;;
     --capability) [ "$#" -ge 2 ] || die "--capability requires a value"; capability=$2; shift 2 ;;
+    --user) [ "$#" -ge 2 ] || die "--user requires a value"; ssh_user=$2; shift 2 ;;
+    --known-hosts) [ "$#" -ge 2 ] || die "--known-hosts requires a file"; known_hosts_file=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option '$1'" ;;
   esac
 done
 
-if [ "$command" = network ] || [ "$command" = route ]; then
+if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; then
   [ -n "$network_socket" ] || die "--socket is required"
   [ -S "$network_socket" ] || die "cannot connect to network socket '$network_socket'"
   request_operation=$command
   request_payload='{}'
   if [ "$command" = network ]; then
     case "$subcommand" in status|providers|endpoints|snapshot|export) request_operation=$subcommand ;; *) die "unknown network command '$subcommand'" ;; esac
-  else
+  elif [ "$command" = route ]; then
     [ -n "$source_node" ] && [ -n "$target_node" ] || die "route requires --source and --target"
     request_payload=$(jq -cn --arg source "$source_node" --arg target "$target_node" --arg capability "$capability" '{source: $source, target: $target, capability: $capability}')
+  else
+    [ -n "$source_node" ] && [ -n "$target_node" ] && [ -n "$ssh_user" ] || die "ssh requires --source, --target, and --user"
+    request_operation=route
+    request_payload=$(jq -cn --arg source "$source_node" --arg target "$target_node" '{source: $source, target: $target, capability: "ssh"}')
   fi
   response=$(jq -cn --arg operation "$request_operation" --argjson payload "$request_payload" '{version: 1, id: "arbor-manager-cli", operation: $operation, payload: $payload}' | socat -T 5 - UNIX-CONNECT:"$network_socket") || die "network daemon request failed"
   jq -e '.ok == true' <<<"$response" >/dev/null || die "network daemon rejected request: $(jq -r '.error // "unknown error"' <<<"$response")"
-  if [ "$format" = text ]; then jq -r '.result | to_entries[] | "\(.key)=\(.value|tostring)"' <<<"$response"; else jq -S '.result' <<<"$response"; fi
-  exit 0
+  if [ "$command" != ssh ]; then
+    if [ "$format" = text ]; then jq -r '.result | to_entries[] | "\(.key)=\(.value|tostring)"' <<<"$response"; else jq -S '.result' <<<"$response"; fi
+    exit 0
+  fi
+  jq -e '.result.reachable == true and (.result.binding | type) == "object"' <<<"$response" >/dev/null || die "no executable SSH route was selected"
+  endpoints_response=$(jq -cn '{version: 1, id: "arbor-manager-cli-endpoints", operation: "endpoints", payload: {}}' | socat -T 5 - UNIX-CONNECT:"$network_socket") || die "could not read network endpoints"
+  jq -e '.ok == true' <<<"$endpoints_response" >/dev/null || die "network daemon rejected endpoint request"
+  nodes=$(jq -c '.result.nodes' <<<"$response")
+  edges=$(jq -c '.result.edges' <<<"$response")
+  endpoint_for() {
+    local node=$1 index=$2
+    jq -e --arg node "$node" --argjson index "$index" '
+      .result.observed[] | select(.node == $node and .generation == $index)
+    ' <<<"$endpoints_response" 2>/dev/null | head -n1
+  }
+  accepted_for() {
+    local node=$1 network=$2 provider=$3 generation=$4
+    jq -e --arg node "$node" --arg network "$network" --arg provider "$provider" --argjson generation "$generation" '
+      .result.accepted[] | select(.node == $node and .network == $network and .provider == $provider and .generation == $generation)
+    ' <<<"$endpoints_response" 2>/dev/null | head -n1
+  }
+  node_count=$(jq 'length' <<<"$nodes")
+  target_edge=$(jq -c '.[-1]' <<<"$edges")
+  target_record=$(accepted_for "$target_node" "$(jq -r .network <<<"$target_edge")" "$(jq -r .provider <<<"$target_edge")" "$(jq -r .endpoint_generation <<<"$target_edge")") || die "accepted target endpoint is unavailable"
+  target_observation=$(endpoint_for "$target_node" "$(jq -r .endpoint_generation <<<"$target_edge")") || die "observed target endpoint is unavailable"
+  target_address=$(jq -r '.address' <<<"$target_observation")
+  target_port=$(jq -r '.port // empty' <<<"$target_observation")
+  target_key=$(jq -r '.sshHostKey // empty' <<<"$target_record")
+  [ -n "$target_key" ] || die "accepted target SSH host identity is unavailable"
+  jumps=
+  generated_hosts=$(mktemp)
+  cleanup_ssh() { rm -f "$generated_hosts"; }
+  trap cleanup_ssh EXIT
+  printf '%s %s\n' "$target_address" "$target_key" >>"$generated_hosts"
+  if [ "$node_count" -gt 2 ]; then
+    for ((index=1; index<node_count-1; index++)); do
+      jump_node=$(jq -r --argjson index "$index" '.[$index]' <<<"$nodes")
+      jump_edge=$(jq -c --argjson index "$((index - 1))" '.[ $index ]' <<<"$edges")
+      jump_generation=$(jq -r '.endpoint_generation' <<<"$jump_edge")
+      jump_network=$(jq -r '.network' <<<"$jump_edge")
+      jump_provider=$(jq -r '.provider' <<<"$jump_edge")
+      jump_record=$(accepted_for "$jump_node" "$jump_network" "$jump_provider" "$jump_generation") || die "accepted jump endpoint is unavailable: $jump_node"
+      jump_observation=$(endpoint_for "$jump_node" "$jump_generation") || die "observed jump endpoint is unavailable: $jump_node"
+      jump_key=$(jq -r '.sshHostKey // empty' <<<"$jump_record")
+      [ -n "$jump_key" ] || die "accepted jump SSH host identity is unavailable: $jump_node"
+      jump_address=$(jq -r '.address' <<<"$jump_observation")
+      printf '%s %s\n' "$jump_address" "$jump_key" >>"$generated_hosts"
+      if [ -z "$jumps" ]; then jumps="$ssh_user@$jump_address"; else jumps="$jumps,$ssh_user@$jump_address"; fi
+    done
+  fi
+  if [ -n "$known_hosts_file" ]; then
+    [ -r "$known_hosts_file" ] || die "cannot read known-hosts file '$known_hosts_file'"
+  else
+    known_hosts_file=$generated_hosts
+  fi
+  ssh_args=(-o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts_file" -o BatchMode=yes)
+  [ -n "$jumps" ] && ssh_args+=(-J "$jumps")
+  [ -n "$target_port" ] && ssh_args+=(-p "$target_port")
+  exec ssh "${ssh_args[@]}" "$ssh_user@$target_address"
 fi
 
 [ -n "$snapshot_file" ] || die "--snapshot is required"
