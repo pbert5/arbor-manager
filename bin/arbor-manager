@@ -5,6 +5,8 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
+  arbor-manager network status|providers|endpoints|snapshot --socket FILE [--format json|text]
+  arbor-manager route --socket FILE --source NODE --target NODE [--capability CAPABILITY]
   arbor-manager machine export --snapshot FILE --name NODE [--format json|text]
   arbor-manager machine inspect --snapshot FILE --name NODE [--format json|text]
   arbor-manager nodes list --snapshot FILE
@@ -26,6 +28,10 @@ die() { echo "arbor-manager: $*" >&2; exit 2; }
 command=${1:-}
 shift || true
 action=$command
+if [ "$command" = network ] || [ "$command" = route ]; then
+  subcommand=${1:-}
+  shift || true
+fi
 if [ "$command" = nodes ]; then
   subcommand=${1:-}
   shift || true
@@ -48,6 +54,10 @@ backend_executable=
 backend_timeout=300
 receipt_file=
 resume_file=
+network_socket=
+source_node=
+target_node=
+capability=ssh
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -61,10 +71,31 @@ while [ "$#" -gt 0 ]; do
     --receipt) [ "$#" -ge 2 ] || die "--receipt requires a file"; receipt_file=$2; shift 2 ;;
     --resume) [ "$#" -ge 2 ] || die "--resume requires a receipt file"; resume_file=$2; shift 2 ;;
     --dry-run) dry_run=true; shift ;;
+    --socket) [ "$#" -ge 2 ] || die "--socket requires a file"; network_socket=$2; shift 2 ;;
+    --source) [ "$#" -ge 2 ] || die "--source requires a node"; source_node=$2; shift 2 ;;
+    --target) [ "$#" -ge 2 ] || die "--target requires a node"; target_node=$2; shift 2 ;;
+    --capability) [ "$#" -ge 2 ] || die "--capability requires a value"; capability=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option '$1'" ;;
   esac
 done
+
+if [ "$command" = network ] || [ "$command" = route ]; then
+  [ -n "$network_socket" ] || die "--socket is required"
+  [ -S "$network_socket" ] || die "cannot connect to network socket '$network_socket'"
+  request_operation=$command
+  request_payload='{}'
+  if [ "$command" = network ]; then
+    case "$subcommand" in status|providers|endpoints|snapshot|export) request_operation=$subcommand ;; *) die "unknown network command '$subcommand'" ;; esac
+  else
+    [ -n "$source_node" ] && [ -n "$target_node" ] || die "route requires --source and --target"
+    request_payload=$(jq -cn --arg source "$source_node" --arg target "$target_node" --arg capability "$capability" '{source: $source, target: $target, capability: $capability}')
+  fi
+  response=$(jq -cn --arg operation "$request_operation" --argjson payload "$request_payload" '{version: 1, id: "arbor-manager-cli", operation: $operation, payload: $payload}' | socat -T 5 - UNIX-CONNECT:"$network_socket") || die "network daemon request failed"
+  jq -e '.ok == true' <<<"$response" >/dev/null || die "network daemon rejected request: $(jq -r '.error // "unknown error"' <<<"$response")"
+  if [ "$format" = text ]; then jq -r '.result | to_entries[] | "\(.key)=\(.value|tostring)"' <<<"$response"; else jq -S '.result' <<<"$response"; fi
+  exit 0
+fi
 
 [ -n "$snapshot_file" ] || die "--snapshot is required"
 [ -r "$snapshot_file" ] || die "cannot read snapshot '$snapshot_file'"

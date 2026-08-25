@@ -21,6 +21,7 @@
           runtimeInputs = [
             pkgs.coreutils
             pkgs.jq
+            pkgs.socat
             pkgs.util-linux
           ];
           text = builtins.readFile ./bin/arbor-manager;
