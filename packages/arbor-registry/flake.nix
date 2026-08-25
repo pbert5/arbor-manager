@@ -27,6 +27,10 @@
           module = nixosModule;
           pkgs = import nixpkgs { inherit system; };
         };
+        recovery = import ./tests/recovery.nix {
+          inherit registry;
+          pkgs = import nixpkgs { inherit system; };
+        };
       });
     };
 }
