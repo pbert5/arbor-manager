@@ -176,6 +176,7 @@ rec {
       remaining = builtins.filter (name: !(builtins.elem name chosenCanary)) selected;
       batches = chunks validBatchSize remaining;
       recommendation = backendRecommendation nodes selected backend;
+      risks = riskFor nodes selected;
       phases =
         (lib.optional (chosenCanary != [ ]) {
           name = "canary";
@@ -200,12 +201,12 @@ rec {
       snapshotDigest = jsonDigest snapshot;
       acknowledgement = {
         digest = jsonDigest {
-          inherit snapshotDigest phases;
+          inherit snapshotDigest phases risks;
           backend = recommendation.backend;
         };
         token = "arbor-manager/v1:${snapshotDigest}:${
           jsonDigest {
-            inherit snapshotDigest phases;
+            inherit snapshotDigest phases risks;
             backend = recommendation.backend;
           }
         }";
@@ -224,7 +225,7 @@ rec {
             acknowledgement
             ;
           backend = recommendation;
-          risks = riskFor nodes selected;
+          inherit risks;
           names = selected;
           commands = acknowledgement.commands;
           inspect = {

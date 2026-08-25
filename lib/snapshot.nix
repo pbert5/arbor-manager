@@ -113,6 +113,7 @@ let
         plan = {
           backend = if plan ? backend then plan.backend.backend else "direct";
           phases = plan.phases or [ ];
+          risks = plan.risks or [ ];
         };
         acknowledgement = plan.acknowledgement or null;
       };

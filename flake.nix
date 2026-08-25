@@ -53,6 +53,19 @@
           let
             pkgs = import nixpkgs { inherit system; };
             cli = mkCli system;
+            mockBackend = pkgs.writeShellScript "arbor-manager-mock-backend" ''
+              set -euo pipefail
+              request=$(cat)
+              test "$(jq -r .endpoint.host <<<"$request")" = api.example
+              test "$(jq -r .endpoint.port <<<"$request")" = 2222
+              test "$(jq -r .endpoint.user <<<"$request")" = deploy
+              jq -n --arg backend "$(jq -r .backend <<<"$request")" --arg phase "$(jq -r .phase <<<"$request")" --arg node "$(jq -r .node <<<"$request")" --argjson endpoint "$(jq -c .endpoint <<<"$request")" --argjson risk "$(jq -c .risk <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "succeeded", backend: $backend, phase: $phase, node: $node, endpoint: $endpoint, risk: $risk, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest, secret: "do-not-print"}'
+            '';
+            failingBackend = pkgs.writeShellScript "arbor-manager-failing-backend" ''
+              set -euo pipefail
+              request=$(cat)
+              jq -n --arg node "$(jq -r .node <<<"$request")" --arg snapshotDigest "$(jq -r .snapshotDigest <<<"$request")" --arg acknowledgementDigest "$(jq -r .acknowledgementDigest <<<"$request")" '{status: "failed", node: $node, snapshotDigest: $snapshotDigest, acknowledgementDigest: $acknowledgementDigest}'
+            '';
           in
           pkgs.runCommand "arbor-manager-cli-check"
             {
@@ -74,16 +87,31 @@
                     selected: ["api"],
                     excluded: [{name: "db", reasons: ["outside-selector"]}],
                       nodes: {
-                        api: {system: "x86_64-linux", profiles: ["server"], provenance: {kind: "test"}},
+                        api: {
+                          system: "x86_64-linux",
+                          hostname: "api.example",
+                          targetHost: "api.example",
+                          targetPort: 2222,
+                          targetUser: "deploy",
+                          profiles: ["server"],
+                          provenance: {kind: "test"},
+                          metadata: {
+                            apiToken: "cli-secret-token",
+                            runtimePath: "/run/credentials/arbor/api-token",
+                            storePath: "/nix/store/unsafe-secret",
+                            privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\\nsecret\\n-----END OPENSSH PRIVATE KEY-----",
+                            endpoint: "https://user:password@example.invalid/api?token=secret"
+                          }
+                        },
                         db: {system: "x86_64-linux", profiles: ["database"]}
                       },
                   },
-                  plan: {backend: "direct", phases: []},
+                  plan: {backend: "direct", phases: [{name: "canary", names: ["api"], commands: ["mock"]}]},
                   acknowledgement: null
                 }')
                 snapshot_digest=$(printf '%s' "$snapshot" | jq -cS '.snapshot' | sha256sum | cut -d' ' -f1)
                 snapshot=$(jq --arg digest "$snapshot_digest" '. + {snapshotDigest: $digest}' <<<"$snapshot")
-                acknowledgement_digest=$(printf '%s' "$snapshot" | jq -cS '{snapshotDigest, phases: .plan.phases, backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
+                acknowledgement_digest=$(printf '%s' "$snapshot" | jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
                 snapshot=$(jq --arg digest "$acknowledgement_digest" '.acknowledgement = {digest: $digest, token: ("arbor-manager/v1:" + .snapshotDigest + ":" + $digest)}' <<<"$snapshot")
                 digest=$(printf '%s' "$snapshot" | jq -cS 'del(.digest)' | sha256sum | cut -d' ' -f1)
                 jq --arg digest "$digest" '. + {digest: $digest}' <<<"$snapshot" > "$work/snapshot.json"
@@ -92,16 +120,53 @@
                 ${cli}/bin/arbor-manager nodes list --snapshot "$work/snapshot.json" --scope local --format names > "$work/local"
                 test "$(cat "$work/local")" = api
                 ${cli}/bin/arbor-manager nodes list --snapshot "$work/snapshot.json" --scope selected --format table | grep -q '^NAME'
-                ${cli}/bin/arbor-manager nodes list --snapshot "$work/snapshot.json" --scope selected --format ssh | grep -q '^root@api$'
+                ${cli}/bin/arbor-manager nodes list --snapshot "$work/snapshot.json" --scope selected --format ssh | grep -q '^deploy@api.example$'
                 ${cli}/bin/arbor-manager nodes list --snapshot "$work/snapshot.json" --scope selected --format colmena | grep -q '^api$'
                 ${cli}/bin/arbor-manager machine inspect --snapshot "$work/snapshot.json" --name api > "$work/inspect.json"
-                jq -e '.format == "arbor-manager/machine-inspect" and .record.system == "x86_64-linux"' "$work/inspect.json"
+                jq -e '
+                  .format == "arbor-manager/machine-inspect"
+                  and .record.system == "x86_64-linux"
+                  and .record.provenance.kind == "test"
+                  and .provenance.source.kind == "test"
+                  and .record.metadata.apiToken == "<redacted>"
+                  and .record.metadata.runtimePath == "<redacted>"
+                  and .record.metadata.storePath == "<redacted>"
+                  and .record.metadata.privateKey == "<redacted>"
+                  and .record.metadata.endpoint == "<redacted>"
+                ' "$work/inspect.json"
+                ${cli}/bin/arbor-manager machine export --snapshot "$work/snapshot.json" --name api > "$work/export.json"
+                jq -e '
+                  .metadata.apiToken == "<redacted>"
+                  and .metadata.runtimePath == "<redacted>"
+                  and .metadata.storePath == "<redacted>"
+                  and .metadata.privateKey == "<redacted>"
+                  and .metadata.endpoint == "<redacted>"
+                ' "$work/export.json"
+                if grep -Eq 'cli-secret-token|/run/credentials|/nix/store/unsafe-secret|OPENSSH PRIVATE KEY|user:password|token=secret' "$work/inspect.json" "$work/export.json"; then exit 1; fi
                 ${cli}/bin/arbor-manager deployment-plan --snapshot "$work/snapshot.json" --format text | grep -q 'deployment snapshot'
                 ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --dry-run --format json | jq -e '.status == "dry-run" and .applied == false'
                 if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement wrong 2>"$work/refusal"; then exit 1; fi
                 grep -q 'acknowledgement does not match the immutable plan and snapshot' "$work/refusal"
-                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" 2>"$work/backend-refusal"; then exit 1; fi
-                grep -q 'offline CLI has no deployment backend' "$work/backend-refusal"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" 2>"$work/no-backend"; then exit 1; fi
+                grep -q 'no deployment backend configured' "$work/no-backend"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} > "$work/applied.json" 2> "$work/backend-error"; then :; else cat "$work/backend-error"; cat "$work/applied.json"; exit 1; fi
+                jq -e '.status == "applied" and .applied == true and (.results | length) == 1 and .results[0].status == "succeeded" and .results[0].provider.status == "succeeded" and .results[0].provider.secret == "<redacted>"' "$work/applied.json"
+                if grep -q 'do-not-print' "$work/applied.json"; then exit 1; fi
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${failingBackend} > "$work/failed.json" 2> "$work/failed-error"; then exit 1; fi
+                jq -e '.status == "failed" and .applied == false and .results[0].error == "backend response did not confirm request identity or success"' "$work/failed.json"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/snapshot.json" --acknowledgement "$acknowledgement_digest" --backend-executable ${mockBackend} --dry-run > "$work/dry-run.json"; then :; else exit 1; fi
+                batch=$(jq -cS '.snapshot.selected = ["api", "api-2"] | .snapshot.nodes["api-2"] = .snapshot.nodes.api | .plan.phases = [{name: "canary", names: ["api"], commands: ["mock"]}, {name: "batches", names: [["api-2"]], commands: [["mock"]]}] | del(.snapshotDigest, .acknowledgement, .digest)' "$work/snapshot.json")
+                batch_snapshot_digest=$(printf '%s' "$batch" | jq -cS '.snapshot' | sha256sum | cut -d' ' -f1)
+                batch=$(jq --arg digest "$batch_snapshot_digest" '. + {snapshotDigest: $digest}' <<<"$batch")
+                batch_ack=$(printf '%s' "$batch" | jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' | sha256sum | cut -d' ' -f1)
+                batch=$(jq --arg digest "$batch_ack" '.acknowledgement = {digest: $digest, token: ("arbor-manager/v1:" + .snapshotDigest + ":" + $digest)}' <<<"$batch")
+                batch_digest=$(printf '%s' "$batch" | jq -cS 'del(.digest)' | sha256sum | cut -d' ' -f1)
+                jq --arg digest "$batch_digest" '. + {digest: $digest}' <<<"$batch" > "$work/batch.json"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/batch.json" --acknowledgement "$batch_ack" --backend-executable ${mockBackend} --receipt "$work/receipt.json" > "$work/batch-applied.json"; then :; else cat "$work/batch-applied.json"; exit 1; fi
+                jq -e --arg receipt "$work/receipt.json" '.status == "applied" and (.results | length) == 2 and .receipt == $receipt' "$work/batch-applied.json"
+                jq -e --arg digest "$(jq -r .snapshotDigest "$work/batch.json")" '.format == "arbor-manager/deployment-receipt" and .snapshotDigest == $digest and (.results | length) == 2' "$work/receipt.json"
+                if ${cli}/bin/arbor-manager deployment apply --snapshot "$work/batch.json" --acknowledgement "$batch_ack" --backend-executable ${mockBackend} --resume "$work/receipt.json" > "$work/resumed.json"; then :; else exit 1; fi
+                jq -e 'all(.results[]; .resumed == true)' "$work/resumed.json"
                 touch "$out"
             '';
         fixtures =
