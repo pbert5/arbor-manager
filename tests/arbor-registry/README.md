@@ -59,9 +59,11 @@ cover the transport and OpenBao HTTP provider where noted:
 - production OrbitDB/Helia topology policy, network partitions, and
   signed live replication beyond the repository's two-daemon convergence
   check;
-- OpenBao authorization policy, production auth, systemd-vaultd credentials,
-  and proof under a real NixOS service manager; the package check exercises
-  OpenBao dev-server HTTP delivery and rotation reads;
+- OpenBao authorization policy and production auth; the package checks now
+  exercise OpenBao HTTP delivery through `arbor-openbao-provider` in a NixOS
+  VM, plus a separate fixture for the upstream systemd-vaultd socket contract.
+  They do not yet prove a direct provider-to-vaultd adapter or production
+  authentication policy;
 - real SSH or `nixos-rebuild` execution, Colmena invocation, host reachability,
   canary acknowledgement, rollback, and deployment receipts;
 - cryptographic verification of recovery approvals in the pure recovery model;

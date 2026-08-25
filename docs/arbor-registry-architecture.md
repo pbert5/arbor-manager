@@ -4,9 +4,10 @@ This document freezes the initial extraction boundary for `arbor-registry` and
 its integration with `arbor-manager`. It is deliberately a small, inspectable
 foundation; transport and privileged credential delivery remain runtime
 concerns. The repository includes executable tests for two-daemon
-OrbitDB/Helia convergence, OpenBao HTTP credential delivery, and a real
-NixOS VM using the pinned upstream systemd-vaultd socket contract; remote
-deployment remains an injected concern.
+OrbitDB/Helia convergence, a NixOS VM covering OpenBao HTTP delivery through
+the Arbor provider, and a separate fixture VM covering the pinned upstream
+systemd-vaultd socket contract; remote deployment remains an injected
+concern.
 
 ## Ownership
 
@@ -179,8 +180,13 @@ with Ed25519 key storage, signed enrollment and recovery lifecycle records,
 generation/revocation enforcement, durable local ingestion,
 compatibility/lineage quarantine, live-tested OrbitDB transport, and
 live-tested OpenBao HTTP credential delivery with an initial-fetch gate and
-rotation watcher, plus a NixOS VM proving upstream systemd-vaultd credential
-delivery. Real SSH/Colmena execution remains an external integration.
+rotation watcher, plus a NixOS VM proving provider delivery and a separate
+fixture VM proving upstream systemd-vaultd credential delivery. The upstream
+fixture deliberately does not claim direct provider-to-vaultd composition:
+the pinned vaultd module consumes its own rendered JSON contract, so a future
+adapter must connect provider output to that contract before an end-to-end
+production path can be claimed. Real SSH/Colmena execution remains an
+external integration.
 
 ## Migration classification
 
