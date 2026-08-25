@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1787627397,
-        "narHash": "sha256-ehBAVZg5itbfdkGMatDBceWEh4Q8zpIcnXLMw63rHuo=",
+        "lastModified": 1787627858,
+        "narHash": "sha256-a1fjto75dnucs6whbr9S6F7tzqoWytfWQ26KmkKpCmw=",
         "owner": "pbert5",
         "repo": "arbor-manager",
-        "rev": "159efe9ad3dd35481f117589f010e6951f2f676d",
+        "rev": "9807211590e8d4ef0391c3d99e3effe15f1ab681",
         "type": "github"
       },
       "original": {
@@ -23,11 +23,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787627469,
-        "narHash": "sha256-20eZwoqIGMBJ3VA1VC6FWb8XrB5/BlpL8TgqiUpLpg0=",
+        "lastModified": 1787627857,
+        "narHash": "sha256-fAR5+NiEhs2wAAO6TJ0PtbfZvzPDbghw8wLekma2xtw=",
         "owner": "pbert5",
         "repo": "arbor-registry",
-        "rev": "9265a52b05cf39bb1d4b450a07543ae01ad73fc3",
+        "rev": "b2c3fa00eb473c6bf9e37262a52fd9fdd278c579",
         "type": "github"
       },
       "original": {
