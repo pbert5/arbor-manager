@@ -87,9 +87,14 @@ strings.
 `lib.plan` turns a selection into an inspectable deployment plan. It includes a
 canonical snapshot and SHA-256 digest, backend recommendation (`direct` or
 `colmena`), critical-route and state risks, canary/batch phases, acknowledgement
-digest, and copyable names/commands. The backend strings are interfaces until
-an operator explicitly supplies a backend adapter executable to the CLI. The
-Nix library still never opens connections or executes Colmena.
+digest, and copyable names/commands. Selected names are emitted in graph order;
+parents in the selected graph always precede their children, while unreachable,
+incompatible, disabled, standby, and suspended targets remain excluded unless
+their respective policy allows them. A canary is one first graph-valid node,
+and the remaining nodes are partitioned into deterministic batches. The backend
+strings are interfaces until an operator explicitly supplies a backend adapter
+executable to the CLI. The Nix library still never opens connections or
+executes Colmena.
 
 When a plan selects the Colmena backend, `lib.rawHive` projects the same
 resolved machine records into a raw Colmena hive. Only `plan.names` become

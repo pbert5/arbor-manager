@@ -82,6 +82,8 @@ assert
 assert
   (builtins.head (builtins.filter (entry: entry.name == "db") plan.selection.excluded)).reasons
   == [ "unreachable" ];
+assert builtins.elem "incompatible"
+  (builtins.head (builtins.filter (entry: entry.name == "isolated") plan.selection.excluded)).reasons;
 assert
   (builtins.head (builtins.filter (entry: entry.name == "standby") plan.selection.excluded)).reasons
   == [ "standby-not-allowed" ];
@@ -94,6 +96,32 @@ assert
     "worker"
   ];
 assert plan.backend.backend == "direct";
+let
+  batchedColmenaPlan = manager.plan {
+    inherit nodes;
+    roots = [ "api" ];
+    selector = "accessible";
+    backend = "colmena";
+    canary = "api";
+    batchSize = 2;
+  };
+in
+assert batchedColmenaPlan.backend.backend == "colmena";
+assert
+  batchedColmenaPlan.phases == [
+    {
+      name = "canary";
+      names = [ "api" ];
+      commands = [ "colmena apply --on 'api'" ];
+    }
+    {
+      name = "batches";
+      names = [ [ "worker" ] ];
+      commands = [ [ "colmena apply --on 'worker'" ] ];
+    }
+  ];
+assert (builtins.elem "db" (map (entry: entry.name) batchedColmenaPlan.selection.excluded));
+assert (builtins.elem "isolated" (map (entry: entry.name) batchedColmenaPlan.selection.excluded));
 assert snapshotPlan.names == plan.names;
 assert snapshotPlan.snapshotDigest == plan.snapshotDigest;
 assert (builtins.filter (risk: risk.kind == "critical-route") plan.risks) != [ ];
