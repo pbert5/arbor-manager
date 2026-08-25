@@ -9,6 +9,7 @@
     nixosModules = {
       tilingDesktop = inputs.tilingDesktop.nixosModules.default;
       arborRegistry = inputs.arbor-registry.nixosModules.default;
+      arborNetworkManager = inputs.arbor-network-manager.nixosModules.default;
       arborVaultRuntime = inputs.arbor-registry.nixosModules.vault-runtime;
       arborVaultRuntimeUpstream = inputs.arbor-registry.nixosModules.vault-runtime-upstream;
     };
