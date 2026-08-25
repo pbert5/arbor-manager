@@ -63,6 +63,52 @@
                 };
               };
             };
+            rejectedApiToken = builtins.tryEval (
+              lib.validateMachine "api-token" {
+                system = "x86_64-linux";
+                profiles = [ ];
+                apiToken = "do-not-expose";
+              }
+            );
+            rejectedPrivateKey = builtins.tryEval (
+              lib.validateMachine "private-key" {
+                system = "x86_64-linux";
+                profiles = [ ];
+                privateKey = "-----BEGIN PRIVATE KEY-----";
+              }
+            );
+            rejectedStorePath = builtins.tryEval (
+              lib.validateMachine "store-path" {
+                system = "x86_64-linux";
+                profiles = [ ];
+                metadata.store = "/nix/store/unsafe-secret";
+              }
+            );
+            rejectedFunction = builtins.tryEval (
+              lib.validateMachine "function" {
+                system = "x86_64-linux";
+                profiles = [ ];
+                metadata.transform = value: value;
+              }
+            );
+            rejectedDerivation = builtins.tryEval (
+              builtins.deepSeq (lib.registrySnapshot {
+                digest = "sha256:executable";
+                machines.derivation = {
+                  system = "x86_64-linux";
+                  profiles = [ ];
+                  metadata.payload = builtins.derivation {
+                    name = "manager-test";
+                    system = "x86_64-linux";
+                    builder = "/bin/sh";
+                    args = [
+                      "-c"
+                      "touch $out"
+                    ];
+                  };
+                };
+              }) true
+            );
           in
           assert valid.name == "fixture";
           assert valid.hostname == "fixture";
@@ -81,6 +127,11 @@
           assert !(builtins.hasAttr "clusterRole" lib.machineTypes);
           assert snapshot.machineNames == [ "snapshot" ];
           assert snapshot.configurations.snapshot.config.networking.hostName == "snapshot";
+          assert !rejectedApiToken.success;
+          assert !rejectedPrivateKey.success;
+          assert !rejectedStorePath.success;
+          assert !rejectedFunction.success;
+          assert !rejectedDerivation.success;
           assert (import ./tests/node-selection.nix { inherit (nixpkgs) lib; });
           (import nixpkgs { inherit system; }).emptyFile;
       });

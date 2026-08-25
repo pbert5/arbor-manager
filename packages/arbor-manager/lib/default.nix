@@ -3,6 +3,92 @@ let
   nodeSelection = import ./node-selection.nix { inherit lib; };
   deploymentPlan = import ./deployment-plan.nix { inherit lib nodeSelection; };
 
+  publicMachineFields = [
+    "identity"
+    "system"
+    "platform"
+    "profiles"
+    "hostname"
+    "cluster"
+    "enabled"
+    "provenance"
+    "precedence"
+    "hardware"
+    "intent"
+    "endpoints"
+    "services"
+    "compatibility"
+    "metadata"
+  ];
+
+  unsafeKey =
+    name:
+    let
+      normalized = lib.toLower (builtins.replaceStrings [ "-" "_" ] [ "" "" ] name);
+    in
+    lib.elem normalized [
+      "secret"
+      "password"
+      "passphrase"
+      "token"
+      "credential"
+      "privatekey"
+      "signingkey"
+      "apikey"
+      "apitoken"
+      "accesstoken"
+      "seed"
+    ];
+
+  unsafeString =
+    value:
+    builtins.isString value
+    && (
+      lib.hasPrefix "/nix/store/" value
+      || lib.hasPrefix "/run/secrets/" value
+      || lib.hasPrefix "/run/credentials/" value
+      || lib.hasPrefix "/var/run/secrets/" value
+      || lib.hasPrefix "-----BEGIN" value
+    );
+
+  validatePublicValue =
+    context: value:
+    if builtins.isFunction value then
+      throw "Arbor Manager: ${context} contains an executable function."
+    else if builtins.typeOf value == "path" then
+      let
+        pathValue = toString value;
+      in
+      if lib.hasPrefix "/nix/store/" pathValue then
+        throw "Arbor Manager: ${context} contains an unsafe store path."
+      else
+        true
+    else if unsafeString value then
+      throw "Arbor Manager: ${context} contains an unsafe secret or runtime value."
+    else if builtins.isList value then
+      builtins.all (item: validatePublicValue context item) value
+    else if builtins.isAttrs value then
+      if (value.type or null) == "derivation" || builtins.hasAttr "__functor" value then
+        throw "Arbor Manager: ${context} contains an executable derivation or functor."
+      else
+        builtins.all (
+          name:
+          if unsafeKey name then
+            throw "Arbor Manager: ${context} contains secret-like key '${name}'."
+          else
+            validatePublicValue "${context}.${name}" value.${name}
+        ) (builtins.attrNames value)
+    else
+      true;
+
+  sanitizeMachineRecord =
+    name: raw:
+    let
+      _safe = validatePublicValue "machine '${name}'" raw;
+    in
+    assert _safe;
+    builtins.intersectAttrs (lib.genAttrs publicMachineFields (_: true)) raw;
+
   machineTypes = {
     system = lib.types.enum [
       "x86_64-linux"
@@ -14,10 +100,11 @@ let
   validateMachine =
     name: raw:
     let
+      sanitized = sanitizeMachineRecord name raw;
       required =
         field:
-        if builtins.hasAttr field raw then
-          builtins.getAttr field raw
+        if builtins.hasAttr field sanitized then
+          builtins.getAttr field sanitized
         else
           throw "Arbor Manager: machine '${name}' is missing required field '${field}'.";
       system = required "system";
@@ -31,11 +118,11 @@ let
           true
         else
           throw "Arbor Manager: machine '${name}' has unsupported system '${system}'.";
-      hostname = raw.hostname or name;
-      profiles = raw.profiles or [ ];
-      cluster = raw.cluster or { };
-      provenance = raw.provenance or { kind = "inline"; };
-      precedence = raw.precedence or 0;
+      hostname = sanitized.hostname or name;
+      profiles = sanitized.profiles or [ ];
+      cluster = sanitized.cluster or { };
+      provenance = sanitized.provenance or { kind = "inline"; };
+      precedence = sanitized.precedence or 0;
     in
     assert lib.assertMsg (
       builtins.match "[a-zA-Z0-9][a-zA-Z0-9-]*" name != null
@@ -57,17 +144,10 @@ let
         provenance
         precedence
         ;
-      enabled = raw.enabled or true;
-    }
-    // (builtins.removeAttrs raw [
-      "system"
-      "hostname"
-      "profiles"
-      "cluster"
-      "enabled"
-      "provenance"
-      "precedence"
-    ]);
+      enabled = sanitized.enabled or true;
+    };
+  # The intersection above is intentional: source records are data only.
+  # Local modules are carried by the separate `modules` field on a source.
 
   optionalModule = path: if builtins.pathExists path then [ path ] else [ ];
 
@@ -97,7 +177,6 @@ let
           ++ optionalModule "${directory}/configuration.nix";
         provenance = {
           kind = "local";
-          path = toString directory;
         };
         precedence = 0;
       }) (discover machinesPath)
@@ -112,7 +191,8 @@ let
       builtins.isString digest && digest != ""
     ) "Arbor Manager: registry snapshots require a non-empty digest.";
     lib.mapAttrsToList (name: record: {
-      inherit name record;
+      inherit name;
+      record = sanitizeMachineRecord name record;
       modules = [ ];
       provenance = {
         kind = "registry-snapshot";
@@ -178,6 +258,7 @@ in
 {
   inherit
     machineTypes
+    sanitizeMachineRecord
     validateMachine
     discover
     localSource
