@@ -16,6 +16,17 @@
     in
     {
       lib = registry;
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          runtime = import ./runtime/package.nix { inherit (pkgs) lib python3Packages; };
+        in
+        {
+          arbor-registry-runtime = runtime;
+          default = runtime;
+        }
+      );
       nixosModules.default = nixosModule;
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt-tree);
       checks = forAllSystems (system: {
@@ -27,6 +38,18 @@
           module = nixosModule;
           pkgs = import nixpkgs { inherit system; };
         };
+        runtime =
+          (import nixpkgs { inherit system; }).runCommand "arbor-registry-runtime-tests"
+            {
+              nativeBuildInputs = [
+                ((import nixpkgs { inherit system; }).python3.withPackages (ps: [ ps.pynacl ]))
+              ];
+            }
+            ''
+              export PYTHONPATH=${./runtime}
+              python -m unittest discover -s ${./runtime/tests} -v
+              touch $out
+            '';
       });
     };
 }
