@@ -252,7 +252,9 @@ Nix/Git contains construction logic, Arbor Registry contains mutable public
 cluster knowledge, OpenBao owns privileged runtime authority and secret values,
 and Arbor Manager creates inspectable source/selection/deployment plans. The
 optional transport has an executable two-daemon convergence test, and the
-runtime provider has an executable OpenBao dev-server delivery test. OpenBao
-identity recovery, upstream systemd-vaultd behavior, and real SSH/Colmena
-deployment remain external integrations. See [the architecture](docs/arbor-registry-architecture.md) and
+runtime provider has an executable OpenBao dev-server delivery test. Signed
+enrollment, identity-generation/revocation, recovery approvals, initial
+credential gating, and resumable deployment receipts are now runtime
+boundaries. Upstream systemd-vaultd socket behavior and real SSH/Colmena host
+execution remain external integrations. See [the architecture](docs/arbor-registry-architecture.md) and
 [the migration matrix](docs/arbor-registry-migration-matrix.md).

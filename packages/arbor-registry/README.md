@@ -23,15 +23,18 @@ the socket. The optional Node package in `transport/` contains only generic
 OrbitDB/Helia event-log storage and this socket protocol. It omits the
 reference daemon's clusterctl/OpenBao, content, manifest, ACL, and event
 admission controllers. Event translation belongs in its explicit `encode`/
-`decode` hooks; validation, enrollment authority, receipts, and
-reconciliation remain outside the transport seam.
+`decode` hooks; validation, enrollment authority, lifecycle receipts, and
+reconciliation remain outside the transport seam and inside the runtime.
 
 Record families are enumerated by `familyNames`. Relationships support active,
 suspended, severed, and standby states; standby edges are retained but are not
 included in active parent traversal. Multiple parents are valid. Parent cycles
 are reported by `validateGraph`; peer relationships are not parent cycles.
 
-The runtime Provider seam is intentionally raw and transport-only:
+The runtime Provider seam is intentionally raw and transport-only. The runtime
+also exposes signed enrollment, identity-generation, revocation, recovery
+approval, and receipt helpers; transport replication never makes those records
+authoritative by itself:
 
 ```text
 append(record) -> durable zero-based cursor

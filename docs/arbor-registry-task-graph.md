@@ -24,7 +24,9 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | REGISTRY-MACHINE-SOURCE | DONE | registry + manager + machine model | manager | pure digest-requiring snapshot adapter |
 | MACHINE-SNAPSHOT-TOOLING | DONE | registry source | manager; `packages/arbor-manager` | inspect/export provenance and digest checks |
 | OPENBAO-RUNTIME-IDENTITY | DONE | secret boundary + registry | registry; `packages/arbor-registry` | runtime identity generations and recovery boundary |
-| SYSTEMD-VAULTD-INTEGRATION | DONE (boundary) | secret boundary + research | registry; `packages/arbor-registry` | runtime credential binding module; upstream vaultd/OpenBao remain injected |
+| ENROLLMENT-RECOVERY-LIFECYCLE | DONE | runtime identity boundary | registry runtime | signed enrollment approvals, identity generations, revocation, recovery approvals, provenance, and receipts |
+| AUTHORITY-ACCEPTANCE-BOUNDARY | DONE | graph + capability model | registry pure Nix | reconcile-stage relationship/capability provenance and non-amplification enforcement |
+| SYSTEMD-VAULTD-INTEGRATION | DONE (boundary) | secret boundary + research | registry; `packages/arbor-registry` | one-shot initial credential gate plus rotation watcher; upstream vaultd socket remains injected |
 | ENDPOINT-SERVICE-REGISTRY | DONE | network model + registry | worker | endpoints/services/runtime views and policy modules |
 | NODE-SELECTION | DONE | registry source + graph | worker | selectors and copyable output |
 | DEPLOY-PLANNER | DONE | deployment backend + selection | worker | plans/risk/acknowledgements |
@@ -45,8 +47,8 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | ORBITDB-ADAPTER | DONE (optional daemon) | runtime Provider boundary | worker; `packages/arbor-registry/transport` | extracted OrbitDB/Helia daemon and executable two-daemon convergence test |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
 | ARBOR-CLI | DONE (offline + opt-in provider) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | inspect/list/export/plan and digest-bound direct provider execution |
-| DEPLOYMENT-ACK-EXECUTION | DONE (opt-in direct provider) | deployment planner + CLI | worker; `packages/arbor-manager` | immutable plan/ack checks and mocked backend execution; no real host contacted |
-| VAULT-RUNTIME-TEST | DONE (mock + OpenBao HTTP) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract plus OpenBao dev-server delivery test |
+| DEPLOYMENT-ACK-EXECUTION | DONE (opt-in adapter) | deployment planner + CLI | worker; `packages/arbor-manager` | immutable plan/risk/ack checks, direct/Colmena adapter protocol, batch receipts and resume; no real host contacted |
+| VAULT-RUNTIME-TEST | DONE (mock + OpenBao HTTP) | vault boundary | worker; `packages/arbor-registry` | initial readiness gate, restart-aware rotation, no-leakage contract, and OpenBao dev-server delivery test |
 | ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 | TRANSPORT-CONVERGENCE-FIX | DONE (bounded) | optional OrbitDB daemon | worker; registry transport/runtime | peer bootstrap, replicated indexing, cursor forwarding, atomic index writes |
@@ -55,6 +57,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | PROVIDER-EXECUTION-HARDENING | DONE | security review | lead; registry runtime + manager CLI | bounded/timed provider commands, contained backend stderr, full backend response identity |
 | TRANSPORT-REPLAY-RECOVERY-HARDENING | DONE | distributed review | lead; registry transport | duplicate-event convergence, unreadable-record cursor retry, bounded quarantine, private state permissions |
 | FINAL-POSTFIX-REVIEW | DONE | provider/transport hardening | independent security + distributed reviewers | no MUST-fix findings; token/restart/socket-parent SHOULD hardening also applied |
+| REMOTE-MAIN-PROMOTION | DONE | standalone component sync | lead + worker | arbor-manager `4279a1e`, arbor-registry `128d50f`; root lock refreshed and normal remote checks passed |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository

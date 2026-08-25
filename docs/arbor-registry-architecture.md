@@ -174,10 +174,12 @@ reachability is not authorization; revoked identity generations do not
 resurrect; and local overrides do not silently alter security authority.
 
 The current extracted milestone also includes an optional runtime package
-with Ed25519 key storage, durable local ingestion, compatibility/lineage
-quarantine, recovery metadata, live-tested OrbitDB transport, and live-tested
-OpenBao HTTP credential delivery. Upstream systemd-vaultd behavior and real
-SSH/Colmena execution remain external integrations.
+with Ed25519 key storage, signed enrollment and recovery lifecycle records,
+generation/revocation enforcement, durable local ingestion,
+compatibility/lineage quarantine, live-tested OrbitDB transport, and
+live-tested OpenBao HTTP credential delivery with an initial-fetch gate and
+rotation watcher. Upstream systemd-vaultd socket behavior and real SSH/Colmena
+execution remain external integrations.
 
 ## Migration classification
 
