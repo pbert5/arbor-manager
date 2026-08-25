@@ -51,6 +51,7 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 | TRANSPORT-CONVERGENCE-FIX | DONE (bounded) | optional OrbitDB daemon | worker; registry transport/runtime | peer bootstrap, replicated indexing, cursor forwarding, atomic index writes |
 | SECURITY-HARDENING-ROUND-2 | DONE | final security review | workers; registry/manager | socket fail-closed, CLI redaction, recovery verifier/rotation safeguards |
+| TRANSPORT-LOCK-OWNERSHIP-FIX | DONE | post-fix distributed/security review | worker; `packages/arbor-registry/transport` | ownership-safe stale takeover, heartbeat, and old-owner release tests |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
