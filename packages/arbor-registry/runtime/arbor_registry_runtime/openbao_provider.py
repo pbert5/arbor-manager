@@ -190,6 +190,13 @@ def run(args: argparse.Namespace) -> int:
         if token_file is None:
             raise ValueError("HTTP OpenBao adapter requires --token-file")
     previous: str | None = None
+    if args.watch and args.ready.exists():
+        try:
+            candidate = args.ready.read_text(encoding="ascii").strip()
+            if re.fullmatch(r"[0-9a-f]{64}", candidate):
+                previous = candidate
+        except (OSError, UnicodeDecodeError):
+            previous = None
     while True:
         request = {"path": args.path, "field": args.field, "authMethod": args.auth_method}
         if args.node_identity_path:
