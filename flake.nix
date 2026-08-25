@@ -22,6 +22,7 @@
     arbor-manager.url = "github:pbert5/arbor-manager";
     arbor-registry.url = "github:pbert5/arbor-registry";
     arbor-network-manager.url = "github:pbert5/arbor-network-manager";
+    yggdrasil-private.url = "github:pbert5/yggdrasil-private";
   };
 
   outputs =
