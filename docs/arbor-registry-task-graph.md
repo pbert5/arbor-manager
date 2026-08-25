@@ -44,9 +44,10 @@ Lead-maintained queue for the extraction. States use the repository workflow:
 | FINAL-GAP-AUDIT | DONE WITH FOLLOW-UPS | all integrated work | lead + reviewers | checks pass; live OrbitDB/OpenBao/systemd-vaultd/CLI execution remains explicitly incomplete |
 | ORBITDB-ADAPTER | DONE (contract) | runtime Provider boundary | worker; `packages/arbor-registry/runtime` | legacy transport audit and bounded provider/adapter contract; live OrbitDB remains follow-up |
 | EXPLICIT-PEER-EDGES | DONE | graph model | worker; `packages/arbor-registry/lib` | explicit peer records, cohorts, and selectors |
-| ARBOR-CLI | IN_PROGRESS | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan CLI |
-| VAULT-RUNTIME-TEST | IN_PROGRESS | vault boundary | worker; `packages/arbor-registry` | mock readiness/rotation contract |
-| ACCEPTANCE-HARNESS | IN_PROGRESS | runtime + manager APIs | integration-test; repository tests | end-to-end synthetic scenario evidence |
+| ARBOR-CLI | DONE (offline) | snapshot/selector/planner APIs | worker; `packages/arbor-manager` | offline inspect/list/export/plan CLI; no live execution |
+| VAULT-RUNTIME-TEST | DONE (mock contract) | vault boundary | worker; `packages/arbor-registry` | readiness/rotation/no-leakage contract; no live OpenBao |
+| ACCEPTANCE-HARNESS | DONE (synthetic) | runtime + manager APIs | integration-test; repository tests | end-to-end pure scenario; live capabilities documented |
+| HARDWARE-SNAPSHOT-SOURCE | DONE (validation) | machine-record model | worker; `packages/arbor-manager` | structured facts/content-addressed artifact references |
 
 The lead dispatches a newly unblocked row immediately; this table is not a
 serial phase plan. Research agents may finish without changing repository
