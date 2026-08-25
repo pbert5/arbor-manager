@@ -34,3 +34,29 @@ contain `hardware-configuration.nix` and `configuration.nix` modules.
 Directories are discovered deterministically in lexical order. Each result is
 still assembled with native `nixosSystem`, with the normalized record exposed
 at `config.arbor.machine` and as the `machine` special argument.
+
+## Selection and deployment plans
+
+The pure `lib.graph` function normalizes a node attrset whose optional
+`children` and `parents` fields contain node names. `lib.selectors` provides
+`local`, `children`, `descendants`, `parents`, `ancestors`, `peers`, and
+`accessible`; all results are sorted and cycle-safe. `lib.select` returns the
+selected names plus deterministic exclusion records. Nodes with
+`reachable = false`, `compatible = false`, disabled nodes, and suspended or
+standby nodes (unless explicitly allowed) are excluded with stable reason
+strings.
+
+`lib.plan` turns a selection into an inspectable deployment plan. It includes a
+canonical snapshot and SHA-256 digest, backend recommendation (`direct` or
+`colmena`), critical-route and state risks, canary/batch phases, acknowledgement
+digest, and copyable names/commands. The backend strings are interfaces only:
+Arbor Manager does not open SSH connections or execute Colmena.
+
+```nix
+plan = lib.plan {
+  nodes = inventory;
+  roots = [ "api" ];
+  selector = "accessible";
+  batchSize = 2;
+};
+```
