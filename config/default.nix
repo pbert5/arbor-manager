@@ -84,6 +84,7 @@ let
   ];
   r640 = [
     inputs.sops-nix.nixosModules.sops
+    { virtualisation.docker.enable = true; }
     r640Users
     r640Env
     serverTools
