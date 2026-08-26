@@ -10,9 +10,12 @@ Radicle, Matrix, distributed builds, or an operational Yggdrasil dependency.
 - LVM discovery remains disabled.
 - `networking.hostId = "cbda65de"`; ZFS support imports existing pool
   `mypool` without a create/format/destroy operation or forced import.
-- `ash` (verified UID 1000, primary GID 100), `madeline`, `wheel`,
-  `home-share`, SSH, and Tailscale are declared. Ash has public fallback
-  authorized keys; root SSH is key-only and has no configured key.
+- `ash` (verified UID 1000, primary GID 100), `madeline` (UID 1001),
+  `wheel`, and `home-share` (GID 993) are declared. Ash has the three
+  existing migration keys plus six additional public keys recovered exactly
+  from the trusted legacy access ledger. The live-only `ash@k8head0` key
+  material was not recoverable and is not fabricated; root SSH is key-only
+  and has no configured key.
 - NetworkManager is enabled with DHCP on `eno3` and `eno4`.
 - Docker is available to the declared users (including the `docker` group),
   but no workloads are deployed by this configuration.
@@ -38,7 +41,7 @@ df -h / /boot /mypool
 getent passwd ash
 id ash
 stat -c '%u:%g %a %n' /home/ash /home/madeline
-hostid | grep -Fx cbda65de
+test "$(hostid)" = cbda65de
 nmcli device show eno3 eno4
 systemctl is-active NetworkManager
 docker info

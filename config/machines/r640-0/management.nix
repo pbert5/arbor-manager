@@ -43,6 +43,7 @@
             in
             profile.connection.interface-name == interface
             && profile.ipv4.method == "auto"
+            && profile.ipv6.method == "auto"
             && !(profile ? ipv4.address1)
             && !(profile.connection ? uuid)
           )
@@ -51,6 +52,10 @@
             "eno4"
           ];
       message = "r640-0 eno3 and eno4 must remain NetworkManager DHCP profiles without static addresses or UUIDs";
+    }
+    {
+      assertion = config.virtualisation.docker.enable;
+      message = "r640-0 must preserve Docker capability without selecting workloads";
     }
     {
       assertion = config.networking.networkmanager.unmanaged == [ "tailscale0" ];
