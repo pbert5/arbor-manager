@@ -1,7 +1,62 @@
-{ ... }:
+{ config, lib, ... }:
 {
   networking.hostName = "r640-0";
-  networking.useDHCP = true;
+  networking.networkmanager = {
+    enable = true;
+    unmanaged = [ "tailscale0" ];
+    ensureProfiles.profiles = {
+      eno3 = {
+        connection = {
+          id = "eno3";
+          type = "ethernet";
+          interface-name = "eno3";
+        };
+        ipv4.method = "auto";
+        ipv6.method = "auto";
+      };
+      eno4 = {
+        connection = {
+          id = "eno4";
+          type = "ethernet";
+          interface-name = "eno4";
+        };
+        ipv4.method = "auto";
+        ipv6.method = "auto";
+      };
+    };
+  };
+  assertions = [
+    {
+      assertion =
+        config.networking.networkmanager.enable
+        && !config.networking.useDHCP
+        && !config.systemd.network.enable;
+      message = "r640-0 physical networking must be managed by NetworkManager";
+    }
+    {
+      assertion =
+        lib.all
+          (
+            interface:
+            let
+              profile = config.networking.networkmanager.ensureProfiles.profiles.${interface};
+            in
+            profile.connection.interface-name == interface
+            && profile.ipv4.method == "auto"
+            && !(profile ? ipv4.address1)
+            && !(profile.connection ? uuid)
+          )
+          [
+            "eno3"
+            "eno4"
+          ];
+      message = "r640-0 eno3 and eno4 must remain NetworkManager DHCP profiles without static addresses or UUIDs";
+    }
+    {
+      assertion = config.networking.networkmanager.unmanaged == [ "tailscale0" ];
+      message = "r640-0 must keep tailscale0 outside NetworkManager management";
+    }
+  ];
   services.tailscale = {
     enable = true;
     useRoutingFeatures = "client";
