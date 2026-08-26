@@ -10,9 +10,12 @@ Radicle, Matrix, distributed builds, or an operational Yggdrasil dependency.
 - LVM discovery remains disabled.
 - `networking.hostId = "cbda65de"`; ZFS support imports existing pool
   `mypool` without a create/format/destroy operation or forced import.
-- `ash` (UID 1000), `madeline`, `wheel`, `home-share`, SSH, and Tailscale are
-  declared. Ash has public fallback authorized keys; root SSH is key-only and
-  has no configured key.
+- `ash` (verified UID 1000, primary GID 100), `madeline`, `wheel`,
+  `home-share`, SSH, and Tailscale are declared. Ash has public fallback
+  authorized keys; root SSH is key-only and has no configured key.
+- NetworkManager is enabled with DHCP on `eno3` and `eno4`.
+- Docker is available to the declared users (including the `docker` group),
+  but no workloads are deployed by this configuration.
 - Home Manager, AshZsh, server tooling, Git identity, and safe home-share
   link services are composed for r640.
 - SOPS/age is wired but disabled until the operator provisions the encrypted
@@ -33,15 +36,23 @@ sudo zfs list -o name,mountpoint,canmount,mounted
 sudo zfs get -r mountpoint mypool
 df -h / /boot /mypool
 getent passwd ash
+id ash
 stat -c '%u:%g %a %n' /home/ash /home/madeline
-test "$(cat /etc/hostid)" = cbda65de
+hostid | grep -Fx cbda65de
+nmcli device show eno3 eno4
+systemctl is-active NetworkManager
+docker info
+docker ps --all
 ```
 
 Confirm the pool is not imported by another host, the exact dataset tree and
 mountpoints are understood, existing home contents are backed up, Tailscale
-is enrolled or its bootstrap secret is available, and local console/recovery
-access is present. Do not run `zpool create`, `zpool export`, `zpool labelclear`,
-`mkfs`, or destructive dataset commands as preflight.
+is enrolled or its bootstrap secret is available, the verified UID/GID values
+match the intended existing home ownership, both `eno3` and `eno4` receive
+DHCP leases through NetworkManager, Docker is usable but has no workloads,
+and local console/recovery access is present. Do not run `zpool create`,
+`zpool export`, `zpool labelclear`, `mkfs`, or destructive dataset commands as
+preflight.
 
 ## Build, switch, and rollback
 
