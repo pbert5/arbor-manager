@@ -6,8 +6,22 @@
   ...
 }:
 {
+  assertions = [
+    {
+      assertion = config.users.users.ash.uid == 1000;
+      message = "The ash identity must use UID 1000.";
+    }
+    {
+      assertion = config.users.users.madeline.uid == 1001;
+      message = "The madeline identity must use UID 1001.";
+    }
+    {
+      assertion = config.users.groups.home-share.gid == 993;
+      message = "The home-share group must use GID 993.";
+    }
+  ];
   programs.zsh.enable = true;
-  users.groups.home-share = { };
+  users.groups.home-share.gid = 993;
   users.users.ash = {
     uid = 1000;
     isNormalUser = true;
@@ -30,6 +44,7 @@
     hashedPasswordFile = lib.mkIf config.arbor.environment.secrets.enable config.sops.secrets.ash-password.path;
   };
   users.users.madeline = {
+    uid = 1001;
     isNormalUser = true;
     description = "Madeline";
     shell = pkgs.zsh;
