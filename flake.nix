@@ -10,6 +10,8 @@
     ashzsh.url = "github:pbert5/AshZsh";
     ashzsh.inputs.nixpkgs.follows = "nixpkgs";
     ashzsh.inputs.home-manager.follows = "home-manager";
+    codex-switch.url = "github:pbert5/codex-switch";
+    codex-switch.inputs.nixpkgs.follows = "nixpkgs";
     ashes-tools.url = "github:pbert5/AshesTools";
     ashes-tools.inputs.nixpkgs.follows = "nixpkgs";
     ashes-desktop-apps.url = "github:pbert5/AshDesktopApps";
