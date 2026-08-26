@@ -1,6 +1,38 @@
 { inputs, ... }:
 let
   networkPolicy = import ./networks.nix;
+  r640Users = import ./users;
+  r640Env = import ./env.nix;
+  serverTools =
+    { pkgs, ... }:
+    {
+      environment.systemPackages = with pkgs; [
+        git
+        gh
+        curl
+        wget
+        jq
+        yq-go
+        ripgrep
+        fd
+        fzf
+        tmux
+        btop
+        vim
+        neovim
+        rsync
+        openssh
+        nixfmt-rfc-style
+        nil
+        nix-tree
+        nh
+        tailscale
+        zfs
+        pkgs.codex
+        inputs.codex-switch.packages.${pkgs.system}.codex-switch
+        rtk
+      ];
+    };
   desktop = [
     networkPolicy
     inputs.home-manager.nixosModules.home-manager
@@ -37,16 +69,31 @@ let
   ];
   server = [
     networkPolicy
+    inputs.home-manager.nixosModules.home-manager
     {
       system.stateVersion = "26.05";
       services.openssh.enable = true;
-      users.users.root.openssh.authorizedKeys.keys = [ ];
+      services.openssh.settings = {
+        PasswordAuthentication = false;
+        KbdInteractiveAuthentication = false;
+        PermitRootLogin = "prohibit-password";
+      };
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
     }
+  ];
+  r640 = [
+    inputs.sops-nix.nixosModules.sops
+    r640Users
+    r640Env
+    serverTools
+    (import ./machines/r640-0/storage.nix)
+    (import ./machines/r640-0/management.nix)
   ];
   machines = inputs.arbor-manager.lib.mkMachines {
     inherit inputs;
     machinesPath = ./machines;
-    profiles = { inherit desktop server; };
+    profiles = { inherit desktop server r640; };
   };
 in
 {

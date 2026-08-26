@@ -463,8 +463,29 @@
         "flake-parts": "flake-parts_4",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_5",
+        "sops-nix": "sops-nix",
         "tilingDesktop": "tilingDesktop",
         "yggdrasil-private": "yggdrasil-private"
+      }
+    },
+    "sops-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786629091,
+        "narHash": "sha256-gkig4nPi1CWc4Z50GBsjE4ygSE7hMpl/TwID2an2Cck=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "a8627b21b9107c5711c96b84f32a9a4b3d45295f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "type": "github"
       }
     },
     "systemd-vaultd": {
