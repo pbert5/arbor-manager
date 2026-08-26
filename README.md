@@ -148,8 +148,9 @@ be unique members of `snapshot.selected`. If no backend executable is
 supplied, apply retains an explicit refusal with exit status 3. For a Colmena
 plan, the adapter is the operator-supplied wrapper that turns these verified
 requests into the desired `colmena apply` invocation; Arbor Manager does not
-treat Colmena as registry truth. No SSH or Colmena networking is built into the
-CLI. `--receipt FILE` writes resumable per-node results after each attempt;
+treat Colmena as registry truth. Native SSH and network operations use the
+configured network daemon; deployment adapters remain operator-supplied.
+`--receipt FILE` writes resumable per-node results after each attempt;
 `--resume FILE` accepts only a receipt authenticated with the local
 `ARBOR_MANAGER_RECEIPT_KEY` and bound to the same snapshot and acknowledgement
 digests. Receipt use requires that key to be set; keep it private and stable

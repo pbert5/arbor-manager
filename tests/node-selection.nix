@@ -98,7 +98,14 @@ assert
 assert plan.backend.backend == "direct";
 let
   batchedColmenaPlan = manager.plan {
-    inherit nodes;
+    nodes = nodes // {
+      worker-2 = {
+        parents = [ "api" ];
+      };
+      worker-3 = {
+        parents = [ "api" ];
+      };
+    };
     roots = [ "api" ];
     selector = "accessible";
     backend = "colmena";
@@ -116,8 +123,17 @@ assert
     }
     {
       name = "batches";
-      names = [ [ "worker" ] ];
-      commands = [ [ "colmena apply --on 'worker'" ] ];
+      names = [
+        [
+          "worker"
+          "worker-2"
+        ]
+        [ "worker-3" ]
+      ];
+      commands = [
+        [ "colmena apply --on 'worker worker-2'" ]
+        [ "colmena apply --on 'worker-3'" ]
+      ];
     }
   ];
 assert (builtins.elem "db" (map (entry: entry.name) batchedColmenaPlan.selection.excluded));
