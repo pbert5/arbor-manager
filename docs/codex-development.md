@@ -5,15 +5,14 @@ The file is project-local and is loaded only for trusted projects. It contains
 no credentials:
 
 - `playwright` starts the official `@playwright/mcp` stdio server through `npx`.
-- `context7-hosted` uses Context7's hosted endpoint.
-- `context7-local` starts Context7 locally with `@upstash/context7-mcp`.
+- `context7` uses Context7's hosted endpoint.
 
 Use the repository helper to inspect or change only the `enabled` flags:
 
 ```sh
 ./scripts/codex-mcp list
 ./scripts/codex-mcp enable playwright
-./scripts/codex-mcp disable context7-hosted
+./scripts/codex-mcp disable context7
 ./scripts/codex-mcp all disable
 ./scripts/codex-mcp all enable
 ```
@@ -21,8 +20,10 @@ Use the repository helper to inspect or change only the `enabled` flags:
 Changes are intentionally made to the committed config, so review or revert
 them like any other repository change. Restart Codex after changing a server.
 The hosted endpoint may still require its own OAuth/account policy; do not put
-tokens in this repository. Verify availability with `codex mcp list` or the
-Codex MCP UI, and stop any temporary server process after manual checks.
+tokens in this repository. If hosted access is unavailable, the official local
+alternative is `npx -y @upstash/context7-mcp` (not enabled by default). Verify
+availability with `codex mcp list` or the Codex MCP UI, and stop any temporary
+server process after manual checks.
 
 ## RTK
 

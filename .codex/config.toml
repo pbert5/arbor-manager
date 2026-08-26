@@ -16,13 +16,7 @@ args = ["-y", "@playwright/mcp"]
 enabled = true
 startup_timeout_sec = 20
 
-[mcp_servers.context7-hosted]
+[mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
-enabled = true
-startup_timeout_sec = 20
-
-[mcp_servers.context7-local]
-command = "npx"
-args = ["-y", "@upstash/context7-mcp"]
 enabled = true
 startup_timeout_sec = 20

@@ -4,8 +4,8 @@ set -eu
 usage() {
     cat >&2 <<'EOF'
 usage: scripts/codex-mcp list
-       scripts/codex-mcp enable <playwright|context7-hosted|context7-local>
-       scripts/codex-mcp disable <playwright|context7-hosted|context7-local>
+       scripts/codex-mcp enable <playwright|context7>
+       scripts/codex-mcp disable <playwright|context7>
        scripts/codex-mcp all <enable|disable>
 EOF
     exit 2
@@ -44,7 +44,7 @@ import sys
 import tempfile
 
 path, wanted, state = sys.argv[1:]
-allowed = {"playwright", "context7-hosted", "context7-local"}
+allowed = {"playwright", "context7"}
 if wanted not in allowed:
     raise SystemExit(f"codex-mcp: unknown server: {wanted}")
 
@@ -85,7 +85,7 @@ PY
     all)
         test "$#" -eq 2 || usage
         case "$2" in enable) state=true ;; disable) state=false ;; *) usage ;; esac
-        for server in playwright context7-hosted context7-local; do
+        for server in playwright context7; do
             "$0" "$([ "$state" = true ] && echo enable || echo disable)" "$server"
         done
         ;;
