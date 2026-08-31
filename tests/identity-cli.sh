@@ -17,3 +17,6 @@ chmod 700 "$work/adapter"
 "$cli" identity inspect --runtime-executable "$work/adapter" | jq -e '.nodeId == "node-a" and .privateKey == null' >/dev/null
 "$cli" identity init-self --node-id node-a --domain example.invalid --runtime-executable "$work/adapter" | jq -e '.localGenesis == true and .privateKey == null' >/dev/null
 "$cli" registry summary --node-id node-a --runtime-executable "$work/adapter" | jq -e '.records.total == 219 and .privateKey == null' >/dev/null
+
+printf '%s\n' '{"status":"healthy","healthy":true,"ready":true,"generatedAt":1,"secret":"hidden"}' > "$work/status.json"
+"$cli" doctor --status "$work/status.json" | jq -e '.healthy == true and (.secret|not)' >/dev/null
