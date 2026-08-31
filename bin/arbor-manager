@@ -19,6 +19,7 @@ Usage:
     [--backend-executable FILE] [--backend-timeout SECONDS]
     [--receipt FILE] [--resume FILE]
     [--dry-run] [--format json|text]
+  arbor-manager doctor [--status FILE] [--format json|text]
 
 All commands are offline and read an immutable deployment snapshot.
 EOF
@@ -47,6 +48,7 @@ fi
 
 snapshot_file=
 format=json
+status_file=/run/arbor/doctor/status.json
 name=
 scope=all
 acknowledgement=
@@ -80,10 +82,23 @@ while [ "$#" -gt 0 ]; do
     --capability) [ "$#" -ge 2 ] || die "--capability requires a value"; capability=$2; shift 2 ;;
     --user) [ "$#" -ge 2 ] || die "--user requires a value"; ssh_user=$2; shift 2 ;;
     --known-hosts) [ "$#" -ge 2 ] || die "--known-hosts requires a file"; known_hosts_file=$2; shift 2 ;;
+    --status) [ "$#" -ge 2 ] || die "--status requires a file"; status_file=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option '$1'" ;;
   esac
 done
+
+if [ "$command" = doctor ]; then
+  if [ -r "$status_file" ]; then
+    doctor=$(jq -e -cS . "$status_file") || die "invalid doctor status JSON '$status_file'"
+  else
+    doctor=$(jq -n -cS --arg path "$status_file" '{version:1,status:"unknown",healthy:false,reason:"runtime status file unavailable",statusPath:$path}')
+  fi
+  if [ "$format" = json ]; then printf '%s\n' "$doctor"; else jq -r '"doctor status=" + (.status // "unknown"), (if .reason then "reason=" + .reason else empty end)' <<<"$doctor"; fi
+  healthy=$(jq -r 'if (.healthy? == true or (.status? == "healthy")) then "true" else "false" end' <<<"$doctor")
+  [ "$healthy" = true ] || exit 1
+  exit 0
+fi
 
 if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; then
   [ -n "$network_socket" ] || die "--socket is required"
