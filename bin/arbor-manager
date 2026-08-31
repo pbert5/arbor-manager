@@ -19,6 +19,8 @@ Usage:
     [--backend-executable FILE] [--backend-timeout SECONDS]
     [--receipt FILE] [--resume FILE]
     [--dry-run] [--format json|text]
+  arbor-manager identity inspect|init-self --runtime-executable FILE [--node-id NODE] [--domain DOMAIN]
+  arbor-manager registry summary --runtime-executable FILE --node-id NODE
 
 All commands are offline and read an immutable deployment snapshot.
 EOF
@@ -43,6 +45,9 @@ elif [ "$command" = machine ]; then
 elif [ "$command" = deployment ]; then
   subcommand=${1:-}
   shift || true
+elif [ "$command" = identity ] || [ "$command" = registry ]; then
+  subcommand=${1:-}
+  shift || true
 fi
 
 snapshot_file=
@@ -61,6 +66,9 @@ target_node=
 capability=ssh
 ssh_user=
 known_hosts_file=
+runtime_executable=
+node_id=
+domain=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -80,10 +88,30 @@ while [ "$#" -gt 0 ]; do
     --capability) [ "$#" -ge 2 ] || die "--capability requires a value"; capability=$2; shift 2 ;;
     --user) [ "$#" -ge 2 ] || die "--user requires a value"; ssh_user=$2; shift 2 ;;
     --known-hosts) [ "$#" -ge 2 ] || die "--known-hosts requires a file"; known_hosts_file=$2; shift 2 ;;
+    --runtime-executable|--adapter) [ "$#" -ge 2 ] || die "--runtime-executable requires a file"; runtime_executable=$2; shift 2 ;;
+    --node-id) [ "$#" -ge 2 ] || die "--node-id requires a node"; node_id=$2; shift 2 ;;
+    --domain) [ "$#" -ge 2 ] || die "--domain requires a domain"; domain=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option '$1'" ;;
   esac
 done
+
+if [ "$command" = identity ] || [ "$command" = registry ]; then
+  case "$command/$subcommand" in
+    identity/inspect|identity/init-self|registry/summary) ;;
+    *) die "unknown $command command '$subcommand'" ;;
+  esac
+  [ -n "$runtime_executable" ] && [ -x "$runtime_executable" ] || die "$command $subcommand requires an executable runtime adapter"
+  if [ "$command" = registry ] || [ "$subcommand" = init-self ]; then
+    [ -n "$node_id" ] || die "$command $subcommand requires --node-id"
+  fi
+  request=$(jq -cn --arg operation "$command/$subcommand" --arg nodeId "$node_id" --arg domain "$domain" \
+    '{protocol:"arbor-manager/runtime-adapter",version:1,operation:$operation,data:({} + (if $nodeId == "" then {} else {nodeId:$nodeId} end) + (if $domain == "" then {} else {domain:$domain} end))}')
+  response=$(printf '%s\n' "$request" | env -i PATH="${PATH:-/usr/bin:/bin}" "$runtime_executable") || die "runtime adapter failed"
+  safe=$(jq -e -cS '{format:(.format // "arbor-manager/runtime-response"),version:(.version // 1),status:(.status // "accepted"),operation:(.operation // null),nodeId:(.nodeId // .localIdentity.nodeId // null),initialized:(.initialized // .localIdentity.initialized // null),generation:(.generation // .localIdentity.generation // null),publicFingerprint:(.publicFingerprint // null),localGenesis:(.localGenesis // .localIdentity.localGenesis // null),selfRooted:(.selfRooted // .localIdentity.selfRooted // null),parents:(.parents // .localIdentity.parents // null),peers:(.peers // .localIdentity.peers // null),records:(.records // null),projection:(.projection // null)}' <<<"$response") || die "runtime adapter returned invalid response"
+  if [ "$format" = text ]; then jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' <<<"$safe"; else printf '%s\n' "$safe"; fi
+  exit 0
+fi
 
 if [ "$command" = network ] || [ "$command" = route ] || [ "$command" = ssh ]; then
   [ -n "$network_socket" ] || die "--socket is required"
