@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 CLI = os.environ.get("ARBOR_MANAGER_CLI", "arbor-manager")
-SAFE = re.compile(r"^[A-Za-z0-9._:-]{1,80}$")
+SAFE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def label(value):
@@ -27,203 +27,495 @@ def call(*args, content=None):
         raise ValueError("Manager returned invalid data.") from exc
 
 
+PAGES = ("Overview", "Nodes", "Registry", "Network", "Plan")
+SCHEMAS = ("node-identity", "identity-generation", "relationship", "peer-relationship",
+           "capability", "service", "endpoint", "enrollment", "revocation",
+           "recovery-authorization", "receipt", "trusted-peer")
+STATUSES = ("active", "standby", "standby-parent", "suspended", "severed")
+
+
+def choice(value, allowed):
+    return value if value in allowed else "unknown"
+
+
+def ids(values):
+    return [v for v in values if label(v) != "<hidden>"] if isinstance(values, list) else []
+
+
 def demo_data():
-    """A fictional cluster, encoded with the same digest convention as exports."""
-    snapshot = {
-        "nodes": {
-            "atlas": {"system": "x86_64-linux", "state": "active", "hostname": "atlas.example", "children": ["cedar", "spruce"], "provenance": {"kind": "registry-snapshot"}},
-            "cedar": {"system": "aarch64-linux", "state": "active", "hostname": "cedar.example", "parents": ["atlas"], "provenance": {"kind": "registry-snapshot"}},
-            "spruce": {"system": "x86_64-linux", "state": "active", "hostname": "spruce.example", "parents": ["atlas"]},
-        },
-        "roots": ["atlas"], "selected": ["atlas", "cedar", "spruce"], "excluded": [],
-    }
+    nodes = {}
+    for name, parents, system, state in [
+        ("atlas", [], "x86_64-linux", "active"), ("birch", [], "aarch64-linux", "active"),
+        ("cedar", ["atlas", "birch"], "aarch64-linux", "active"),
+        ("spruce", ["atlas"], "x86_64-linux", "active"),
+        ("moss", ["cedar"], "aarch64-linux", "active"),
+        ("fern", ["birch"], "x86_64-linux", "standby"), ("isle", [], "aarch64-linux", "active"),
+    ]:
+        nodes[name] = dict(system=system, state=state, parents=parents, hostname=name + ".example",
+                           provenance={"kind": "registry-snapshot"})
+    snapshot = dict(nodes=nodes, roots=["atlas", "birch"], selected=["atlas", "birch", "cedar", "spruce", "moss"],
+                    excluded=[dict(name="fern", reasons=["standby-not-allowed"]),
+                              dict(name="isle", reasons=["outside-selector"])])
     def digest(value):
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     document = {"format": "arbor-manager/deployment-snapshot", "version": 1,
                 "snapshot": snapshot, "snapshotDigest": digest(snapshot),
-                "plan": {"backend": "direct", "phases": [{"name": "root", "names": ["atlas"]}, {"name": "leaves", "names": ["cedar", "spruce"]}]}}
+                "plan": {"backend": "direct", "phases": [
+                    {"name": "canary", "names": ["atlas"]},
+                    {"name": "batches", "names": [["birch", "cedar"], ["spruce", "moss"]]}]}}
     document["digest"] = digest(document)
-    projection = {"atlas-identity": {"schema": "node-identity", "generation": 2},
-                  "cedar-link": {"schema": "relationship", "generation": 1},
-                  "spruce-ssh": {"schema": "endpoint", "generation": 3}}
+    projection = {name + "-identity": dict(schema="node-identity", generation=2,
+                                           payload=dict(identity=name)) for name in nodes}
+    for source, target, kind, status in [
+        ("atlas", "cedar", "parent", "active"), ("atlas", "spruce", "parent", "active"),
+        ("birch", "cedar", "parent", "standby"), ("cedar", "moss", "parent", "active"),
+        ("cedar", "spruce", "peer", "active"), ("birch", "fern", "parent", "suspended"),
+    ]:
+        projection[source + "-" + target + "-link"] = {
+            "schema": "relationship", "generation": 3,
+            "payload": {"from": source, "to": target, "kind": kind, "status": status}}
     return json.dumps(document), projection
 
 
+class Topology:
+    """Undirected incidence index with direction and evidence on each displayed link."""
+    def __init__(self, names=()):
+        self.links = {name: set() for name in names}
+
+    def connect(self, source, target, forward, reverse, evidence):
+        self.links.setdefault(source, set()).add((forward, target, evidence))
+        self.links.setdefault(target, set()).add((reverse, source, evidence))
+
+    @classmethod
+    def snapshot(cls, records):
+        graph = cls(records)
+        for name, record in records.items():
+            for field in ("children", "parents"):
+                for other in ids(record.get(field)):
+                    # Selected snapshots may include references beyond their inventory.
+                    source, target = (name, other) if field == "children" else (other, name)
+                    graph.connect(source, target, "Child", "Parent", "declared")
+        return graph
+
+    def components(self):
+        """Group weakly connected vertices, including isolates and referenced nodes."""
+        groups = {}
+        count = 0
+        for start in sorted(self.links):
+            if start in groups:
+                continue
+            count += 1
+            groups[start] = count
+            stack = [start]
+            while stack:
+                for _, other, _ in self.links[stack.pop()]:
+                    if other not in groups:
+                        groups[other] = count
+                        stack.append(other)
+        return groups
+
+    def rows(self, focus):
+        order = {"Parent": 0, "Child": 1, "Peer": 2}
+        return sorted(self.links.get(focus, ()), key=lambda row: (order[row[0]], row[1], row[2]))
+
+
+def registry_view(projection):
+    graph, records = Topology(), []
+    if not isinstance(projection, dict):
+        raise ValueError("Invalid projection")
+    for ordinal, (key, record) in enumerate(projection.items(), 1):
+        if not isinstance(record, dict):
+            raise ValueError("Invalid record")
+        schema = choice(record.get("schema"), SCHEMAS)
+        gen = record.get("generation")
+        generation = gen if type(gen) is int and 0 <= gen <= 999999999 else "?"
+        payload = record.get("payload") or {}
+        facts = []
+        if isinstance(payload, dict) and schema == "node-identity":
+            identity = label(payload.get("identity", payload.get("id")))
+            if identity != "<hidden>":
+                graph.links.setdefault(identity, set())
+                facts.append(("Identity", identity))
+        if isinstance(payload, dict) and schema in ("relationship", "peer-relationship"):
+            source, target = label(payload.get("from")), label(payload.get("to"))
+            kind = choice("peer" if schema == "peer-relationship" else payload.get("kind", "peer"), ("parent", "peer", "trusted-peer", "standby-parent"))
+            status = choice(payload.get("status"), STATUSES)
+            facts.extend([("From", source), ("To", target), ("Kind", kind), ("Status", status)])
+            if "<hidden>" not in (source, target) and kind != "unknown":
+                forward, reverse = ("Child", "Parent") if kind in ("parent", "standby-parent") else ("Peer", "Peer")
+                identifier = label(key)
+                if identifier == "<hidden>":
+                    identifier = f"<hidden #{ordinal}>"
+                graph.connect(source, target, forward, reverse, f"{kind} / {status} / {identifier}")
+        records.append((label(key), schema, generation, facts))
+    return records, graph
+
+
 class Model:
-    def __init__(self, snapshot, socket=None, registry=None, demo=False):
-        self.snapshot, self.socket, self.registry, self.demo = snapshot, socket, registry, demo
-        self.page, self.index, self.query, self.detail = "Overview", 0, "", None
+    def __init__(self, args):
+        self.args = args
+        self.page = args.tab.capitalize()
+        self.index, self.query, self.detail = 0, "", None
+        self.layer, self.focus, self.history = 0, None, []
+        self.endpoints = self.directory = False
         self.refresh()
 
     def refresh(self):
-        # Pin the exact bytes for all inspections until the next refresh.
-        if self.demo:
-            content, demo_projection = demo_data()
+        projection = None
+        if self.args.demo:
+            content, projection = demo_data()
         else:
-            with open(self.snapshot, encoding="utf-8") as source:
+            with open(self.args.snapshot, encoding="utf-8") as source:
                 content = source.read()
+            if self.args.registry_projection:
+                with open(self.args.registry_projection, encoding="utf-8") as source:
+                    projection = json.load(source)
         data = call("deployment-plan", "--snapshot", "/dev/stdin", content=content)
-        snapshot = data["snapshot"]
-        nodes = snapshot["nodes"]
-        plan = data.get("plan") or {}
-        if not isinstance(plan, dict):
-            raise ValueError("Invalid plan")
+        snapshot, plan = data["snapshot"], data.get("plan") or {}
+        raw = snapshot["nodes"]
+        nodes = {n: v for n, v in raw.items() if label(n) != "<hidden>"}
+        if any(not isinstance(v, dict) for v in nodes.values()):
+            raise ValueError("Invalid node")
         phases = plan.get("phases") or []
-        if not isinstance(nodes, dict) or not isinstance(phases, list):
-            raise ValueError("Invalid snapshot structure")
-        if any(not isinstance(p, dict) or not isinstance(p.get("names", []), list) for p in phases):
-            raise ValueError("Invalid plan structure")
+        if not isinstance(phases, list) or any(not isinstance(p, dict) or not isinstance(p.get("names"), list) for p in phases):
+            raise ValueError("Invalid plan")
         selected, excluded = snapshot.get("selected", []), snapshot.get("excluded", [])
         if not isinstance(selected, list) or not isinstance(excluded, list):
             raise ValueError("Invalid selection")
-        names = list(nodes)
-        network, network_error = None, False
-        if self.socket:
+        records, projected = registry_view({} if projection is None else projection)
+        graphs = [Topology.snapshot(nodes), projected]
+        network = (5, 3) if self.args.demo else None
+        network_error = False
+        if self.args.socket:
             try:
-                endpoints = call("network", "endpoints", "--socket", self.socket)
-                accepted, observed = endpoints.get("accepted", []), endpoints.get("observed", [])
-                if not isinstance(accepted, list) or not isinstance(observed, list):
-                    raise ValueError("Invalid network data")
-                network = (len(accepted), len(observed))
+                report = call("network", "endpoints", "--socket", self.args.socket)
+                if not all(isinstance(report.get(k), list) for k in ("accepted", "observed")):
+                    raise ValueError("Invalid endpoints")
+                network = (len(report["accepted"]), len(report["observed"]))
             except (ValueError, OSError, subprocess.TimeoutExpired, TypeError, AttributeError):
                 network_error = True
-        registry_records = None
-        if self.demo or self.registry:
-            if self.demo:
-                projection = demo_projection
-            else:
-                with open(self.registry, encoding="utf-8") as source:
-                    projection = json.load(source)
-            if not isinstance(projection, dict) or any(not isinstance(v, dict) for v in projection.values()):
-                raise ValueError("Invalid Registry projection")
-            schemas = {"node-identity", "identity-generation", "relationship", "capability", "service", "endpoint", "enrollment", "revocation", "recovery-authorization", "receipt"}
-            registry_records = [(label(k), v.get("schema") if isinstance(v.get("schema"), str) and v.get("schema") in schemas else "unknown", v.get("generation") if type(v.get("generation")) is int and 0 <= v["generation"] <= 999999999 else "?") for k, v in projection.items()]
-        self.pinned, self.projection = content, registry_records
-        self.names = [n for n in names if label(n) != "<hidden>"]
-        self.hidden = len(names) - len(self.names)
-        self.selected, self.excluded = len(selected), len(excluded)
-        self.phases = phases
-        self.backend = plan.get("backend") if plan.get("backend") in ("direct", "colmena") else "unknown"
+        self.pinned, self.nodes, self.hidden = content, nodes, len(raw) - len(nodes)
+        self.records, self.supplied, self.graphs = records, projection is not None, graphs
+        self.components = [graph.components() for graph in graphs]
         self.network, self.network_error = network, network_error
-        if self.page == "Detail":
-            self.page = "Nodes"
-        self.index = min(self.index, max(0, len(self.filtered()) - 1))
+        self.selected, self.excluded = set(ids(selected)), len(excluded)
+        self.selected_count = len(selected)
+        self.phases, self.backend = phases, choice(plan.get("backend"), ("direct", "colmena"))
+        self.roots = ids(snapshot.get("roots"))
+        self.detail, self.history = None, []
+        self.set_focus(self.focus)
 
-    def filtered(self):
-        return [n for n in self.names if self.query.lower() in n.lower()]
+    @property
+    def graph(self):
+        return self.graphs[self.layer]
 
-    def open_node(self):
-        names = self.filtered()
-        if names:
-            name = names[self.index]
-            data = call("machine", "inspect", "--snapshot", "/dev/stdin", "--name", name, content=self.pinned)
-            record = data.get("record", {})
-            if not isinstance(record, dict):
-                raise ValueError("Invalid record")
-            source = data.get("provenance", {}).get("source", {})
-            if isinstance(source, dict) and isinstance(source.get("source"), dict):
-                source = source["source"]
-            kind = source.get("kind") if isinstance(source, dict) else None
-            self.detail = (name, record, kind if kind in ("snapshot", "registry-snapshot", "source-merge") else "unspecified")
-            self.page = "Detail"
+    def set_focus(self, name):
+        if name not in self.graph.links:
+            name = next((n for n in self.roots if n in self.graph.links), None)
+        self.focus = name or next(iter(sorted(self.graph.links)), None)
+        self.index = 0
 
-    def lines(self):
+    def switch(self, page):
+        self.page, self.index, self.query, self.detail = page, 0, "", None
+        self.endpoints = self.directory = False
+
+    def registry_matches(self):
+        return [r for r in self.records if self.query.lower() in f"{r[0]} {r[1]}   gen {r[2]}".lower()]
+
+    def rows(self):
+        if self.detail:
+            return []
         if self.page == "Overview":
-            return ["SNAPSHOT OVERVIEW", "", f"Nodes             {len(self.names)} visible   {self.hidden} hidden", f"Selected          {self.selected}", f"Excluded          {self.excluded}", "", "Registry          Provenance in snapshot; live acceptance unavailable", "Network           " + ("endpoint data available" if self.network else "not connected"), f"Deployment plan   {len(self.phases)} phases", "", "Snapshot data is not live health or proof of accepted Registry state.", "Open Nodes to inspect records; use Tab to change section."]
+            return [(p, desc) for p, desc in zip(PAGES[1:], (
+                f"{len(self.nodes)} visible   {self.hidden} hidden", f"{len(self.records)} supplied records",
+                f"{len(self.graphs[0].links)} snapshot vertices", f"{len(self.phases)} phases   {self.backend}"))]
         if self.page == "Nodes":
-            names = self.filtered()
-            return [f"NODES  /{self.query}", "", *[(" > " if i == self.index else "   ") + n for i, n in enumerate(names)], "" if names else "   No matching visible nodes"]
-        if self.page == "Detail":
-            name, record, kind = self.detail
-            lines = [f"NODE  {name}", "", "SNAPSHOT RECORD"]
-            for key in ("system", "state", "hostname", "targetHost", "targetUser", "targetPort"):
-                if key in record:
-                    value = record[key]
-                    lines.append(f"  {key:<16} {value if isinstance(value, int) and not isinstance(value, bool) else label(value)}")
-            for key in ("parents", "children"):
-                value = record.get(key)
-                if isinstance(value, list):
-                    lines.append(f"  {key:<16} " + ", ".join(label(v) for v in value))
-            lines += ["", "PROVENANCE", f"  Source kind: {kind} (snapshot inspection)", "  Provenance is not evidence of accepted Registry state.", "", "Esc returns to Nodes."]
-            return lines
+            rows = [(n, f"{label(v.get('system'))}   {choice(v.get('state', 'active'), STATUSES)}")
+                    for n, v in sorted(self.nodes.items())]
+        elif self.page == "Registry":
+            return [(n, f"{schema}   gen {gen}") for n, schema, gen, _ in self.registry_matches()]
+        elif self.page == "Plan":
+            return [(label(p.get("name")), f"{len(p['names'])} " + ("batches" if any(isinstance(n, list) for n in p["names"]) else "nodes")) for p in self.phases]
+        elif self.endpoints:
+            return []
+        elif self.directory:
+            rows = [(n, f"Group {self.components[self.layer][n]}   /   {len(self.graph.links[n])} links") for n in sorted(self.graph.links)]
+        else:
+            return [(n, f"{kind}   {evidence}") for kind, n, evidence in self.graph.rows(self.focus)]
+        return [row for row in rows if self.query.lower() in (row[0] if self.page == "Network" else " ".join(row)).lower()]
+
+    def preview(self, selected):
+        if self.page in ("Network", "Nodes"):
+            graph = self.graph if self.page == "Network" else self.graphs[0]
+            neighbours = graph.rows(selected)
+            branches = []
+            for i, (role, neighbour, _) in enumerate(neighbours):
+                branch = "└" if i + 1 == len(neighbours) else "├"
+                arrow = {"Parent": "↑", "Child": "↓", "Peer": "↔"}[role]
+                branches.append(f"{branch}─ {arrow} {role:<6} {neighbour}")
+            return "NODE PREVIEW", selected, branches or ["No incident links"]
         if self.page == "Registry":
-            if self.projection is None:
-                return ["REGISTRY PROJECTION", "", "No projection supplied. Use --registry-projection FILE."]
-            return ["REGISTRY PROJECTION", "", "Supplied projection; not independently verified or live.", "Record ID  /  schema  /  generation", "", *[f"  {name}  /  {schema}  /  {generation}" for name, schema, generation in self.projection], "", "Payloads are not displayed."]
-        if self.page == "Network":
-            lines = ["NETWORK", ""]
-            if self.network is not None:
-                lines += [f"Accepted endpoint records    {self.network[0]}", f"Observed endpoint records    {self.network[1]}", "", "Acceptance and transport observation are independent.", "Counts do not establish reachability or route selection."]
-            elif self.network_error:
-                lines += ["Network daemon data unavailable. Check the socket and daemon."]
-            else:
-                lines += ["No network socket supplied.", "Start with --socket FILE to read network endpoint counts."]
-            return lines
-        return ["DEPLOYMENT PLAN", "", f"Backend   {self.backend}", f"Phases    {len(self.phases)}", "", *[f"  Phase {i + 1}  ({len(p.get('names', []))} entries)" for i, p in enumerate(self.phases) if isinstance(p, dict)], "", "Read-only snapshot plan. No deployment is performed.", "Use the CLI to inspect risks and acknowledgements before acting."]
+            _, schema, gen, facts = self.registry_matches()[self.index]
+            return "RECORD PREVIEW", selected, [schema, f"Generation  {gen}", *(f"{k:<9} {v}" for k, v in facts)]
+        if self.page == "Plan":
+            groups = self.phases[self.index]["names"]
+            return "PHASE PREVIEW", selected, [
+                f"Batch {i}   " + ", ".join(label(n) for n in group) if isinstance(group, list) else label(group)
+                for i, group in enumerate(groups, 1)]
+        summaries = {
+            "Nodes": ("Inventory roots", self.roots),
+            "Registry": ("Projected schemas", sorted({r[1] for r in self.records})),
+            "Network": ("Snapshot components", [f"{len(set(self.components[0].values()))} connected groups",
+                                                   f"{sum(not edges for edges in self.graphs[0].links.values())} isolated nodes"]),
+            "Plan": ("Phase order", [label(p.get("name")) for p in self.phases]),
+        }
+        name, facts = summaries[selected]
+        return selected.upper() + " PREVIEW", name, facts or ["No entries"]
+
+    def open(self):
+        rows = self.rows()
+        if not rows:
+            return
+        name = rows[self.index][0]
+        if self.page == "Overview":
+            self.switch(name)
+        elif self.page == "Network":
+            if name != self.focus:
+                self.history.append(self.focus)
+            self.set_focus(name)
+            self.directory, self.query = False, ""
+        elif self.page == "Registry":
+            record = self.registry_matches()[self.index]
+            self.detail = ("RECORD METADATA", name, [("Schema", record[1]), ("Generation", str(record[2])), *record[3]])
+        elif self.page == "Plan":
+            facts = []
+            for index, group in enumerate(self.phases[self.index]["names"], 1):
+                names = group if isinstance(group, list) else [group]
+                facts.extend((f"Batch {index}" if isinstance(group, list) else "Node", label(n)) for n in names)
+            self.detail = ("PHASE MEMBERS", name, facts)
+        else:
+            data = call("machine", "inspect", "--snapshot", "/dev/stdin", "--name", name, content=self.pinned)
+            record = data["record"]
+            facts = [(k, str(record[k]) if k == "targetPort" and type(record[k]) is int else label(record[k]))
+                     for k in ("system", "state", "hostname", "targetHost", "targetUser", "targetPort") if k in record]
+            facts.extend((kind, other) for kind, other, _ in self.graphs[0].rows(name))
+            source = data.get("provenance", {}).get("source", {})
+            if isinstance(source, dict):
+                source = source.get("source", source)
+            kind = choice(source.get("kind"), ("snapshot", "registry-snapshot", "source-merge")) if isinstance(source, dict) else "unknown"
+            self.detail = ("SNAPSHOT RECORD", name, facts + [("Source kind", kind)])
+
+    def back(self):
+        if self.detail:
+            self.detail = None
+        elif self.query or self.directory:
+            self.directory, self.query, self.index = False, "", 0
+        elif self.page == "Network":
+            if self.endpoints:
+                self.endpoints = self.directory = False
+            elif self.history:
+                self.set_focus(self.history.pop())
+
+    def heading(self):
+        if self.detail:
+            kind, name, _ = self.detail
+            return kind, name
+        if self.page == "Overview":
+            return "SNAPSHOT OVERVIEW", f"{self.selected_count} selected   /   {self.excluded} excluded   /   {len(self.roots)} roots"
+        if self.page == "Nodes":
+            return "NODE INVENTORY", "Snapshot records  /  platform and lifecycle"
+        if self.page == "Registry":
+            return "REGISTRY PROJECTION", "Supplied records  /  acceptance unverified" if self.supplied else "No projection supplied. Use --registry-projection FILE."
+        if self.page == "Plan":
+            return "DEPLOYMENT PLAN", f"{self.backend} backend   /   {len(self.phases)} ordered phases"
+        if self.endpoints:
+            return "ENDPOINT OBSERVATIONS", ("Fictional endpoint sample" if self.args.demo else "Network daemon") + "   /   independent of topology"
+        return "RELATIONSHIP EXPLORER", ("Registry projection   /   supplied records" if self.layer else "Snapshot topology   /   declared parents and children")
 
 
 def run(screen, model):
     curses.curs_set(0)
     screen.keypad(True)
-    pages = ["Overview", "Nodes", "Registry", "Network", "Plan"]
-    error = ""
-    scroll = 0
+    curses.set_escdelay(40)
+    palette = [0] * 5
+    if curses.has_colors():
+        curses.start_color()
+        try:
+            curses.use_default_colors()
+            background = -1
+        except curses.error:
+            background = curses.COLOR_BLACK
+        for i, color in enumerate((curses.COLOR_CYAN, curses.COLOR_GREEN, curses.COLOR_YELLOW, curses.COLOR_BLUE), 1):
+            curses.init_pair(i, color, background)
+            palette[i] = curses.color_pair(i)
+    accent, leaf, amber, rule = palette[1:]
+    error, scroll = "", 0
     while True:
         screen.erase()
         h, w = screen.getmaxyx()
-        def put(y, text, attr=0):
-            if 0 <= y < h and w > 1:
+        pad = 2 if w >= 60 else 1
+        def put(y, x, text, attr=0, width=None):
+            count = min(w - x - 1, width if width is not None else w)
+            if 0 <= y < h and count > 0:
                 try:
-                    screen.addnstr(y, 0, text, w - 1, attr)
+                    screen.addnstr(y, x, text, count, attr)
                 except curses.error:
                     pass
-        put(0, " ARBOR MANAGER  /  READ ONLY" + ("  /  DEMO: FICTIONAL DATA" if model.demo else ""), curses.A_BOLD)
-        put(1, "  ".join(("[" + p + "]") if p == model.page or (p == "Nodes" and model.page == "Detail") else p for p in pages))
-        lines = model.lines()
-        offset = max(0, model.index - max(0, h - 8)) if model.page == "Nodes" else 0
-        if offset:
-            lines = lines[:2] + lines[2 + offset:]
-        elif model.page != "Nodes":
-            scroll = min(scroll, max(0, len(lines) - max(1, h - 5)))
-            lines = lines[scroll:]
-        for y, line in enumerate(lines[:max(0, h - 5)], 3):
-            put(y, line)
-        put(h - 2, error)
-        put(h - 1, "Tab sections  j/k move  Enter open  / filter  r refresh  Esc back  q quit")
+        put(0, pad, "ARBOR MANAGER", accent | curses.A_BOLD)
+        put(0, pad + 16, "READ ONLY" + ("   /   FICTIONAL DATA" if model.args.demo else ""), leaf)
+        x = pad
+        for number, page in enumerate(PAGES, 1):
+            tab = f" {number} {page} " if w >= 58 else f" {page[:3]} "
+            put(2, x, tab, (accent | curses.A_REVERSE | curses.A_BOLD) if page == model.page else curses.A_DIM)
+            x += len(tab) + (1 if w >= 64 else 0)
+        title, subtitle = model.heading()
+        put(4, pad, title, curses.A_BOLD)
+        put(5, pad, subtitle, accent)
+        y = 7
+        rows = model.rows()
+        if model.detail:
+            body = model.detail[2]
+        elif model.page == "Network" and model.endpoints:
+            if model.network is not None:
+                body = [("Accepted records", str(model.network[0])), ("Observed records", str(model.network[1])),
+                        ("Route selection", "Unavailable from endpoint counts")]
+            else:
+                body = [("Socket", "Daemon unavailable" if model.network_error else "No network socket supplied."),
+                        ("Input", "--socket FILE")]
+            rows = []
+        else:
+            body = None
+        if model.page == "Network" and not model.endpoints:
+            if model.history:
+                put(y, pad, "Trail   " + "  ›  ".join((model.history + [model.focus])[-4:]), curses.A_DIM)
+                y += 1
+            focus = model.focus or "—"
+            put(y, pad, "FOCUS   " + focus, leaf | curses.A_BOLD)
+            y += 1
+            if model.focus and not model.layer:
+                record = model.nodes.get(model.focus)
+                summary = ("Referenced outside snapshot inventory" if record is None else
+                           f"{label(record.get('system'))}   /   {choice(record.get('state', 'active'), STATUSES)}   /   " +
+                           ("selected" if model.focus in model.selected else "outside selection"))
+                put(y, pad, summary)
+                y += 1
+        if model.query and not model.detail:
+            put(y, pad, "Filter: " + model.query, amber)
+            y += 1
+        preview = w >= 100 and rows and not model.endpoints
+        table_width = w * 3 // 5 if preview else w
+        if preview:
+            side = table_width + 2
+            heading, selected_name, facts = model.preview(rows[model.index][0])
+            put(y, side, heading, accent | curses.A_BOLD)
+            put(y + 2, side, selected_name, leaf | curses.A_BOLD)
+            limit = max(0, h - y - 8)
+            for i, fact in enumerate(facts[:limit]):
+                put(y + 3 + i, side, fact)
+            if len(facts) > limit:
+                put(h - 5, side, f"+ {len(facts) - limit} more", curses.A_DIM)
+            for line in range(y, h - 4):
+                put(line, table_width, "│", rule)
+        if body is None:
+            headers = {"Overview": ("SECTION", "AT A GLANCE"), "Nodes": ("MACHINE", "PLATFORM   /   STATE"),
+                       "Registry": ("RECORD ID", "SCHEMA   /   GENERATION"), "Plan": ("PHASE", "MEMBERS"),
+                       "Network": ("FIND NODE", "CONNECTED GROUP   /   LINKS") if model.directory else ("NEIGHBOUR", "RELATION TO FOCUS   /   SOURCE")}
+            left, right = headers[model.page]
+        else:
+            left, right = "FIELD", "VALUE"
+        split = max(12, min(32, table_width * 2 // 5))
+        put(y, pad + 2, left, rule | curses.A_BOLD, split - pad - 2)
+        put(y, split, right, rule | curses.A_BOLD, table_width - split - 1)
+        y += 1
+        entries = body if body is not None else rows
+        capacity = max(1, h - 3 - y)
+        if body is not None:
+            scroll = min(scroll, max(0, len(entries) - capacity))
+            offset = scroll
+        else:
+            offset = max(0, model.index - capacity + 1)
+        for idx, (name, desc) in enumerate(entries[offset:offset + capacity], offset):
+            selected = body is None and idx == model.index
+            attr = (accent | curses.A_BOLD) if selected else 0
+            put(y, pad, "›" if selected else " ", attr)
+            put(y, pad + 2, str(name), attr, split - pad - 3)
+            put(y, split, desc, amber if "standby" in desc or "suspended" in desc else 0, table_width - split - 1)
+            y += 1
+        if not entries:
+            empty = "No matching records." if model.query else "No entries."
+            if model.page == "Network" and not model.query:
+                empty = "No incident links. Press n for the node directory." if model.focus else "No visible nodes in this source."
+            put(y, pad, empty, amber)
+        if error:
+            put(h - 3, pad, error, amber)
+        elif len(entries) > capacity:
+            put(h - 3, pad, f"{offset + 1}–{min(offset + capacity, len(entries))} of {len(entries)}", leaf)
+        put(h - 2, pad, "─" * max(0, w - 2 * pad), rule)
+        if model.detail:
+            help_text = "Esc back   j/k scroll" + ("   g graph" if model.page == "Nodes" else "")
+        elif model.page == "Network":
+            help_text = "n nodes   / find   Enter focus   s source   e endpoints   Esc back"
+        elif model.page in ("Registry", "Nodes"):
+            help_text = "/ filter   Enter inspect   j/k move"
+        else:
+            help_text = "Enter open   j/k move"
+        if w < 67 and model.page == "Network":
+            help_text = "n list  / find  Enter focus  s layer  e counts  Esc back"
+        put(h - 1, pad, help_text + "   Tab sections   r refresh   q quit", accent)
         screen.refresh()
         key = screen.getch()
         error = ""
         try:
-            if key in (ord("q"),):
+            if key == ord("q"):
                 break
             if key in (9, curses.KEY_BTAB):
-                current = "Nodes" if model.page == "Detail" else model.page
-                model.page = pages[(pages.index(current) + (-1 if key == curses.KEY_BTAB else 1)) % len(pages)]
-                scroll = 0
-            elif key == 27 and model.page == "Detail":
-                model.page = "Nodes"
-                scroll = 0
-            elif key in (ord("j"), curses.KEY_DOWN) and model.page != "Nodes":
-                scroll = min(scroll + 1, max(0, len(model.lines()) - max(1, h - 5)))
-            elif key in (ord("k"), curses.KEY_UP) and model.page != "Nodes":
-                scroll = max(0, scroll - 1)
-            elif key in (ord("j"), curses.KEY_DOWN) and model.page == "Nodes":
-                model.index = min(model.index + 1, max(0, len(model.filtered()) - 1))
-            elif key in (ord("k"), curses.KEY_UP) and model.page == "Nodes":
-                model.index = max(0, model.index - 1)
-            elif key in (10, 13, curses.KEY_ENTER) and model.page == "Nodes":
-                model.open_node()
-            elif key == ord("/") and model.page == "Nodes":
-                curses.echo()
-                put(h - 2, "Filter: ")
-                try:
-                    model.query = screen.getstr(h - 2, 8, max(1, min(80, w - 9))).decode("utf-8", "replace") if w > 9 else ""
-                finally:
-                    curses.noecho()
-                model.index = 0
+                model.switch(PAGES[(PAGES.index(model.page) + (-1 if key == curses.KEY_BTAB else 1)) % len(PAGES)])
+            elif ord("1") <= key <= ord("5"):
+                model.switch(PAGES[key - ord("1")])
+            elif key == 27:
+                model.back()
+            elif key in (ord("j"), curses.KEY_DOWN, curses.KEY_NPAGE, ord("k"), curses.KEY_UP, curses.KEY_PPAGE):
+                step = capacity if key in (curses.KEY_NPAGE, curses.KEY_PPAGE) else 1
+                if key in (ord("k"), curses.KEY_UP, curses.KEY_PPAGE):
+                    step = -step
+                if body is not None:
+                    scroll = max(0, min(scroll + step, len(entries) - capacity))
+                else:
+                    model.index = max(0, min(model.index + step, len(rows) - 1))
+                continue
+            elif key in (10, 13, curses.KEY_ENTER):
+                model.open()
+            elif key == ord("/") and not model.detail and model.page in ("Network", "Registry", "Nodes"):
+                model.endpoints = False
+                screen.move(max(0, h - 2), 0)
+                screen.clrtoeol()
+                put(h - 2, 0, "Filter: ")
+                if w > 9:
+                    curses.echo()
+                    try:
+                        value = screen.getstr(max(0, h - 2), 8, min(80, w - 9)).decode("utf-8", "replace")
+                    finally:
+                        curses.noecho()
+                    model.directory = model.page == "Network"
+                    model.query = "".join(c for c in value if c.isprintable())
+                    model.index = 0
+            elif key == ord("n") and model.page == "Network":
+                model.endpoints, model.directory, model.query, model.index = False, True, "", 0
+            elif key == ord("s") and model.page == "Network":
+                model.layer = 1 - model.layer
+                model.endpoints, model.directory, model.query, model.history = False, False, "", []
+                model.set_focus(model.focus)
+            elif key == ord("e") and model.page == "Network":
+                model.endpoints = not model.endpoints
+                model.directory, model.query, model.index = False, "", 0
+            elif key == ord("g") and model.page == "Nodes" and model.detail:
+                name = model.detail[1]
+                model.switch("Network")
+                model.layer, model.history = 0, []
+                model.set_focus(name)
             elif key == ord("r"):
                 model.refresh()
-                scroll = 0
+            scroll = 0
         except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, TypeError, AttributeError):
             error = "Unable to read data. Check the CLI and input, then refresh."
 
@@ -235,11 +527,12 @@ def main():
     inputs.add_argument("--demo", action="store_true", help="browse a fictional cluster without external inputs")
     parser.add_argument("--socket", help="optional Arbor Network Manager socket")
     parser.add_argument("--registry-projection", help="JSON from Registry Runtime.projection()")
+    parser.add_argument("--tab", choices=[p.lower() for p in PAGES], default="overview")
     args = parser.parse_args()
     if args.demo and (args.socket or args.registry_projection):
         parser.error("--demo cannot be combined with --socket or --registry-projection")
     try:
-        model = Model(args.snapshot, args.socket, args.registry_projection, args.demo)
+        model = Model(args)
         curses.wrapper(run, model)
     except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, TypeError, AttributeError, curses.error):
         print("arbor-manager tui: unable to start; check snapshot, terminal and CLI", file=sys.stderr)

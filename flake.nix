@@ -72,11 +72,13 @@
               }
             );
           in
-          pkgs.runCommand "arbor-manager-tui-check" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-            ${cli}/bin/arbor-manager nodes list --snapshot ${realSnapshot} --format names | grep -qx edge
-            REAL_SNAPSHOT=${realSnapshot} ARBOR_MANAGER_CLI=${cli}/bin/arbor-manager python3 ${./tests/tui.py}
-            touch "$out"
-          '';
+          pkgs.runCommand "arbor-manager-tui-check"
+            { nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.pyte ])) ]; }
+            ''
+              ${cli}/bin/arbor-manager nodes list --snapshot ${realSnapshot} --format names | grep -qx edge
+              REAL_SNAPSHOT=${realSnapshot} ARBOR_MANAGER_CLI=${cli}/bin/arbor-manager python3 ${./tests/tui.py}
+              touch "$out"
+            '';
         cli =
           let
             pkgs = import nixpkgs { inherit system; };
