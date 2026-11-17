@@ -1,0 +1,398 @@
+#!/usr/bin/env python3
+"""Interactive operator console. Runtime keys stay behind the Registry adapter."""
+import argparse
+import contextlib
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import resource
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+
+LIMIT = 65536
+ID = r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}"
+HEX = r"[0-9a-f]{64}"
+
+
+class Problem(Exception):
+    pass
+
+
+def checked(value, pattern=ID):
+    if not isinstance(value, str) or not re.fullmatch(pattern, value):
+        raise Problem("Invalid field. Check the identifier or fingerprint and retry.")
+    return value
+
+
+def ask(label, default=None):
+    value = input(label + (f" [{default}]" if default else "") + ": ").strip()
+    if value == ":cancel":
+        raise Problem("Cancelled.")
+    return value or default or ""
+
+
+def confirm(message):
+    print(message)
+    if ask("Type APPLY to continue") != "APPLY":
+        raise Problem("Cancelled.")
+
+
+def unique_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise Problem("Duplicate JSON key. Resolve it before continuing.")
+        result[key] = value
+    return result
+
+
+def decode(raw):
+    return json.loads(raw, object_pairs_hook=unique_keys)
+
+
+def digest(obj):
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def read_file(path, limit, missing=False):
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        if missing:
+            return None
+        raise
+    with os.fdopen(fd, "rb") as f:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise Problem("Select a regular file.")
+        raw = f.read(limit + 1)
+    if len(raw) > limit:
+        raise Problem("File exceeds the size limit.")
+    return raw
+
+
+def write_file(path, data, previous=None):
+    raw = (json.dumps(data, indent=2, ensure_ascii=True, allow_nan=False) + "\n").encode()
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as f:
+        temporary = Path(f.name)
+        try:
+            f.write(raw)
+            f.flush()
+            os.fsync(f.fileno())
+            if previous is None:
+                os.link(temporary, path)
+            else:
+                if read_file(path, 1048576) != previous:
+                    raise Problem("File changed during review. Inspect it and retry.")
+                metadata = path.stat(follow_symlinks=False)
+                if metadata.st_uid != os.geteuid() or not stat.S_ISREG(metadata.st_mode):
+                    raise Problem("Use an operator-owned regular override file.")
+                os.fchown(f.fileno(), metadata.st_uid, metadata.st_gid)
+                os.fchmod(f.fileno(), stat.S_IMODE(metadata.st_mode))
+                os.fsync(f.fileno())
+                os.replace(temporary, path)
+            directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def edit_state(path):
+    if path is None:
+        raise Problem("Restart with --overrides FILE in an existing operator-owned directory.")
+    node = checked(ask("Inventory node"))
+    state = checked(ask("Desired Manager state (active/standby/suspended)"), "active|standby|suspended")
+    old = read_file(path, 1048576, missing=True)
+    entries = [] if old is None else decode(old)
+    if isinstance(entries, dict):
+        if any(k in entries for k in ("format", "signature", "digest", "machines", "protocolEpoch")):
+            raise Problem("Select a dedicated Manager session override, separate from snapshots and Registry records.")
+        known = node in entries
+        if any(isinstance(e, dict) and ("signature" in e or ("schema" in e and "payload" in e)) for e in entries.values()):
+            raise Problem("Select a Manager override file, separate from Registry projections.")
+        if not all(isinstance(e, dict) and isinstance(e.get("record", e), dict) for e in entries.values()):
+            raise Problem("File is not a Manager session override mapping. Choose a dedicated JSON file.")
+        entry = entries.setdefault(node, {})
+        record = entry.get("record", entry) if isinstance(entry, dict) else None
+    elif isinstance(entries, list):
+        names = set()
+        for entry in entries:
+            if (not isinstance(entry, dict) or not isinstance(entry.get("name"), str)
+                    or not isinstance(entry.get("record"), dict) or entry["name"] in names):
+                raise Problem("Invalid or duplicate entry in session override.")
+            names.add(entry["name"])
+        known = node in names
+        if not known:
+            entries.append({"name": node, "record": {}})
+        record = next(entry["record"] for entry in entries if entry["name"] == node)
+    else:
+        record = None
+    if not isinstance(record, dict):
+        raise Problem("Expected a Manager session override list or object.")
+    if not known:
+        print(f"New override for {node}. If absent from your base inventory, sourceMerge will introduce a new machine.")
+        if ask("Retype the exact inventory name to add this entry") != node:
+            raise Problem("Cancelled.")
+    before = record.get("state", "inherited")
+    checked(before, "active|standby|suspended|inherited")
+    record["state"] = state
+    confirm(f"{node}: {before} -> {state} in {str(path)!r}. Takes effect when consumed by Manager planning.")
+    # Lock the directory so cooperating editors serialize first creation as well as replacement.
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        fcntl.flock(directory, fcntl.LOCK_EX)
+        write_file(path, entries, old)
+        if decode(read_file(path, 1048576)) != entries:
+            raise Problem("Readback changed. Inspect the override before continuing.")
+    finally:
+        os.close(directory)
+    print(f"Verified session override: {node} = {state}.")
+
+
+class Adapter:
+    def __init__(self, args):
+        self.exe = args.runtime_executable or shutil.which("arbor-registry-manager-adapter")
+        self.config = args.config
+
+    def call(self, operation, **data):
+        if not self.exe:
+            raise Problem("Install arbor-registry-runtime or pass --runtime-executable /absolute/path.")
+        command = [self.exe] + (["--config", self.config] if self.config else [])
+        packet = dict(protocol="arbor-manager/runtime-adapter", version=1, operation=operation, data=data)
+        payload = json.dumps(packet).encode() + b"\n"
+        if len(payload) > LIMIT:
+            raise Problem("Request exceeds adapter limit.")
+        def limit_output():
+            resource.setrlimit(resource.RLIMIT_FSIZE, (LIMIT, LIMIT))
+        with tempfile.TemporaryFile() as out:
+            result = subprocess.run(command, input=payload, stdout=out, stderr=subprocess.DEVNULL,
+                                    env={"PATH": os.environ.get("PATH", "")}, timeout=35, preexec_fn=limit_output)
+            if result.returncode or out.tell() >= LIMIT:
+                raise Problem("Registry declined or is unavailable. Check daemon, token access, identity and trust; inspect before retry.")
+            out.seek(0)
+            response = json.load(out)
+        if (not isinstance(response, dict) or response.get("format") != "arbor-manager/runtime-response"
+                or type(response.get("version")) is not int or response["version"] != 1
+                or response.get("status") != "accepted" or response.get("operation") != operation):
+            raise Problem("Unexpected adapter response. Verify the adapter version.")
+        return response
+
+
+class Demo:
+    """Two fictional consoles; artifacts contain no usable keys or signatures."""
+    def __init__(self):
+        self.identity = None
+        self.console = "joining"
+        self.request = self.approval = None
+
+    def call(self, operation, **d):
+        node = d.get("nodeId")
+        if operation == "enrollment/status":
+            return dict(authorityTrusted=d["authorityId"] == "birch", canApprove=self.console == "authority" and d["authorityId"] == "birch",
+                        enrollmentState="occupied" if self.console == "authority" else "enrolled" if getattr(self, "finished", False) else
+                        "pending" if self.request else "new", authorityId=d["authorityId"])
+        if operation == "identity/init-self":
+            if self.identity and self.identity != (node, d["domain"]):
+                raise Problem("Demo node already has another genesis.")
+            self.identity = node, d["domain"]
+        if operation.startswith("identity/"):
+            return dict(initialized=bool(self.identity), localGenesis=bool(self.identity), nodeId=self.identity[0] if self.identity else None,
+                        publicFingerprint=digest(self.identity) if self.identity else None)
+        if operation == "enrollment/request":
+            req = dict(nodeId=node, requestedParent=d["authorityId"], platform=d["platform"], demo=True)
+            if self.request and self.request != req:
+                raise Problem("The demo joining console already has a different request.")
+            self.request = req
+            return dict(request=req, requestDigest=digest(req))
+        if operation == "enrollment/approve":
+            if d["request"] != self.request or self.request["requestedParent"] != d["authorityId"]:
+                raise Problem("The demo authority does not recognize this request.")
+            self.approval = dict(recordId=self.request["nodeId"], issuer=d["authorityId"], demo=True)
+            return dict(approval=self.approval)
+        if not self.approval or d["approval"] != self.approval or self.approval["recordId"] != node:
+            raise Problem("The demo joining console does not recognize this approval.")
+        self.finished = True
+        return dict(nodeId=node, requestDigest=digest(self.request))
+
+
+def artifact_path(label, demo_dir, filename):
+    if demo_dir:
+        return demo_dir / filename
+    value = ask(label)
+    if not value:
+        raise Problem("Enter a public artifact file path.")
+    return Path(value)
+
+
+def readiness(adapter, authority, role):
+    try:
+        result = adapter.call("enrollment/status", authorityId=authority)
+    except Problem:
+        raise Problem("Enrollment preflight unavailable. Check socket access with 1, then install a pairing-capable Registry daemon and adapter.") from None
+    if (result.get("authorityId") != authority or type(result.get("authorityTrusted")) is not bool
+            or type(result.get("canApprove")) is not bool):
+        raise Problem("Invalid enrollment preflight response.")
+    state = checked(result.get("enrollmentState"), "new|pending|enrolled|self-rooted|occupied")
+    print(f"Joining state: {state}. Trusted authority: {result['authorityTrusted']}. Local signer ready: {result['canApprove']}.")
+    if not result["authorityTrusted"]:
+        raise Problem("Configure bootstrapAuthoritiesFile with the verified public key and list this ID in authorityIssuers.")
+    if role == "approve" and not result["canApprove"]:
+        raise Problem("Open this step on the authority with its matching runtime-held signer.")
+    if role == "request" and state not in ("new", "pending"):
+        raise Problem("Choose a fresh joining runtime. An existing identity cannot start enrollment.")
+    if role == "finish" and state not in ("pending", "enrolled"):
+        raise Problem("Use the joining runtime that issued the request.")
+
+
+def pairing(step, adapter, demo_dir):
+    if demo_dir:
+        adapter.console = "authority" if step == "4" else "joining"
+    if step == "3":
+        print("Joining console  /  Fresh identity. Configure your authority's public key first.")
+        node = checked(ask("Joining node ID", "fern" if demo_dir else None))
+        platform = checked(ask("Platform", "x86_64-linux"))
+        authority = checked(ask("Trusted authority ID", "birch" if demo_dir else None))
+        readiness(adapter, authority, "request")
+        target = artifact_path("New public request file", demo_dir, "request.json")
+        if target.exists():
+            raise Problem("Request file exists. Use it for approval or choose a new output path.")
+        confirm(f"Create a runtime-held joining key/request for {node} with authority {authority}.")
+        response = adapter.call("enrollment/request", nodeId=node, platform=platform, authorityId=authority)
+        artifact = response.get("request")
+        fingerprint = checked(response.get("requestDigest"), HEX)
+        if (not isinstance(artifact, dict) or artifact.get("nodeId") != node or artifact.get("requestedParent") != authority
+                or artifact.get("platform") != platform or digest(artifact) != fingerprint):
+            raise Problem("Request digest or subject mismatch.")
+        write_file(target, artifact)
+        print("Transfer the public request to the authority. Compare this digest over a separate trusted channel:")
+        print(fingerprint)
+    elif step == "4":
+        print("Authority console  /  Requires configured external root and its matching signing key.")
+        source = artifact_path("Public request file", demo_dir, "request.json")
+        request = decode(read_file(source, LIMIT))
+        node = checked(request.get("nodeId"))
+        authority = checked(ask("Authority ID", "birch" if demo_dir else None))
+        readiness(adapter, authority, "approve")
+        if request.get("requestedParent") != authority:
+            raise Problem("The request names a different authority.")
+        fingerprint = digest(request)
+        print(f"Applicant {node}. File digest {fingerprint}")
+        if demo_dir:
+            print("Demo joining console comparison:", digest(adapter.request))
+        if ask("Enter digest from joining console", fingerprint if demo_dir else None) != fingerprint:
+            raise Problem("Digest mismatch. Verify with the joining operator.")
+        target = artifact_path("New public approval file", demo_dir, "approval.json")
+        if target.exists():
+            raise Problem("Approval file exists. Use it for finish or choose a new output path.")
+        confirm(f"Authorize generation-one identity {node} under {authority}.")
+        approval = adapter.call("enrollment/approve", authorityId=authority, request=request,
+                                requestDigest=fingerprint).get("approval")
+        if not isinstance(approval, dict) or approval.get("recordId") != node or approval.get("issuer") != authority:
+            raise Problem("Approval subject or signer mismatch.")
+        if not demo_dir and approval.get("payload", {}).get("enrollmentRequestDigest") != fingerprint:
+            raise Problem("Approval does not reference the reviewed request.")
+        write_file(target, approval)
+        print("Transfer the public approval back to the joining console.")
+    else:
+        print("Joining console  /  Import the returned approval using your original runtime.")
+        source = artifact_path("Public approval file", demo_dir, "approval.json")
+        approval = decode(read_file(source, LIMIT))
+        node = checked(approval.get("recordId"))
+        issuer = checked(approval.get("issuer"))
+        readiness(adapter, issuer, "finish")
+        confirm(f"Accept identity {node} signed by {issuer} on this joining runtime.")
+        response = adapter.call("enrollment/finish", nodeId=node, approval=approval)
+        if response.get("nodeId") != node:
+            raise Problem("Unexpected enrollment receipt. Inspect the Registry.")
+        print(f"Registry accepted enrollment for {node}. Parent links and private networking require separate configuration.")
+
+
+def inspect(adapter, node=None):
+    result = adapter.call("identity/inspect", **({"nodeId": node} if node else {}))
+    if node and (result.get("nodeId") != node or result.get("initialized") is not True
+                 or result.get("localGenesis") is not True):
+        raise Problem("Initialization readback differs. Inspect the runtime before retrying.")
+    if result.get("initialized") is False:
+        print("Registry reachable. No local genesis reported.")
+    elif result.get("initialized") is True:
+        print("Initialized identity:", checked(result.get("nodeId")))
+        if result.get("publicFingerprint"):
+            print("Public key SHA-256:", checked(result["publicFingerprint"], HEX))
+    else:
+        raise Problem("Missing identity state in adapter response.")
+
+
+def run(args, demo_dir):
+    adapter = Demo() if demo_dir else Adapter(args)
+    overrides = demo_dir / "overrides.json" if demo_dir else args.overrides
+    print("ARBOR MANAGER   /   ADMINISTRATION")
+    print("ISOLATED DEMO   /   fictional standalone, joining and authority consoles" if demo_dir
+          else "LIVE MODE   /   local Registry and Manager configuration")
+    print("Enter :cancel at any field to return to the menu.")
+    while True:
+        print("\n1  Setup and identity inspection     2  Initialize standalone identity")
+        print("3  Create enrollment request         4  Approve joining node")
+        print("5  Finish enrollment                 6  Change Manager node state")
+        print("7  Check enrollment prerequisites")
+        try:
+            action = ask("Choose 1-7, or q to quit")
+            if action == "q":
+                return
+            if action == "1":
+                print("Configure and start arbor-registry, then grant the operator access to its authenticated socket/token.")
+                print("Use 2 for a standalone identity OR 3-5 for a fresh joining node with preconfigured authority trust.")
+                print("Application credentials belong in OpenBao service bindings. Enter only public identifiers here.")
+                inspect(adapter)
+            elif action == "7":
+                print("Configure cluster.registry.runtime.bootstrapAuthoritiesFile (public keys) and authorityIssuers on both hosts.")
+                print("The approving host also needs the matching signer in its Registry key directory.")
+                authority = checked(ask("Authority ID", "birch" if demo_dir else None))
+                if demo_dir:
+                    adapter.console = checked(ask("Demo console (joining/authority)", "joining"), "joining|authority")
+                readiness(adapter, authority, "inspect")
+            elif action == "2":
+                node = checked(ask("Standalone node ID", "cedar" if demo_dir else None))
+                domain = checked(ask("Authority domain", "garden" if demo_dir else None), r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+                confirm(f"Initialize {node} in {domain}. Registry creates its private signing key and local genesis.")
+                result = adapter.call("identity/init-self", nodeId=node, domain=domain)
+                if result.get("nodeId") != node or result.get("localGenesis") is not True:
+                    raise Problem("Unexpected initialization receipt. Inspect the runtime before retrying.")
+                inspect(adapter, node)
+            elif action in ("3", "4", "5"):
+                pairing(action, adapter, demo_dir)
+            elif action == "6":
+                edit_state(overrides)
+            else:
+                print("Choose a numbered action or q.")
+        except Problem as error:
+            print(error)
+        except (OSError, ValueError, TypeError, AttributeError, KeyError, RecursionError, subprocess.TimeoutExpired):
+            print("Operation incomplete. Check paths, file permissions, JSON and daemon availability. Inspect before retry.")
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="arbor-manager tui --admin")
+    parser.add_argument("--demo", action="store_true", help="use isolated fictional nodes")
+    parser.add_argument("--runtime-executable", help="trusted Registry adapter executable")
+    parser.add_argument("--config", help="Registry adapter configuration path")
+    parser.add_argument("--overrides", type=Path, help="writable Manager sessionOverride JSON file")
+    args = parser.parse_args()
+    if args.demo and any((args.runtime_executable, args.config, args.overrides)):
+        parser.error("--demo uses its own adapter and files")
+    try:
+        with tempfile.TemporaryDirectory() if args.demo else contextlib.nullcontext() as directory:
+            run(args, Path(directory) if directory else None)
+    except (EOFError, KeyboardInterrupt):
+        print("\nClosed.")
+
+
+if __name__ == "__main__":
+    main()

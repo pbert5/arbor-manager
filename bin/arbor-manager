@@ -5,6 +5,9 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
+  arbor-manager tui --admin [--demo | --runtime-executable FILE] [--config FILE] [--overrides FILE]
+  arbor-manager tui --demo [--tab overview|nodes|registry|network|plan]
+  arbor-manager tui --snapshot FILE [--socket FILE] [--registry-projection FILE] [--tab TAB]
   arbor-manager network status|providers|endpoints|snapshot --socket FILE [--format json|text]
   arbor-manager route --socket FILE --source NODE --target NODE [--capability CAPABILITY]
   arbor-manager ssh --socket FILE --source NODE --target NODE --user USER [--known-hosts FILE]
@@ -20,7 +23,7 @@ Usage:
     [--receipt FILE] [--resume FILE]
     [--dry-run] [--format json|text]
 
-All commands are offline and read an immutable deployment snapshot.
+Admin mode can change Registry identity and Manager configuration after confirmation.
 EOF
 }
 
@@ -28,6 +31,13 @@ die() { echo "arbor-manager: $*" >&2; exit 2; }
 
 command=${1:-}
 shift || true
+if [ "$command" = tui ]; then
+  if [ "${1:-}" = --admin ]; then
+    shift
+    exec arbor-manager-admin "$@"
+  fi
+  ARBOR_MANAGER_CLI="$0" exec arbor-manager-tui "$@"
+fi
 action=$command
 if [ "$command" = network ]; then
   subcommand=${1:-}
@@ -193,11 +203,15 @@ snapshot=$(jq -e -cS 'select(.format == "arbor-manager/deployment-snapshot" and 
 # Hashes are checked against canonical JSON, which is the representation used
 # by lib.snapshot.  This makes the CLI reject edited or partially copied files.
 expected_snapshot_digest=$(jq -r '.snapshotDigest' <<<"$snapshot")
-actual_snapshot_digest=$(jq -cS '.snapshot' <<<"$snapshot" | sha256sum | cut -d' ' -f1)
-[ "$expected_snapshot_digest" = "$actual_snapshot_digest" ] || die "snapshotDigest does not match snapshot contents"
+snapshot_json=$(jq -cS '.snapshot' <<<"$snapshot")
+actual_snapshot_digest=$(printf %s "$snapshot_json" | sha256sum | cut -d' ' -f1)
+legacy_snapshot_digest=$(printf '%s\n' "$snapshot_json" | sha256sum | cut -d' ' -f1)
+[ "$expected_snapshot_digest" = "$actual_snapshot_digest" ] || [ "$expected_snapshot_digest" = "$legacy_snapshot_digest" ] || die "snapshotDigest does not match snapshot contents"
 expected_digest=$(jq -r '.digest' <<<"$snapshot")
-actual_digest=$(jq -cS 'del(.digest)' <<<"$snapshot" | sha256sum | cut -d' ' -f1)
-[ "$expected_digest" = "$actual_digest" ] || die "digest does not match snapshot contents"
+body_json=$(jq -cS 'del(.digest)' <<<"$snapshot")
+actual_digest=$(printf %s "$body_json" | sha256sum | cut -d' ' -f1)
+legacy_digest=$(printf '%s\n' "$body_json" | sha256sum | cut -d' ' -f1)
+[ "$expected_digest" = "$actual_digest" ] || [ "$expected_digest" = "$legacy_digest" ] || die "digest does not match snapshot contents"
 
 # A valid digest proves snapshot integrity, not that its machine records are
 # safe to print. Keep this boundary independent of Nix evaluation so imported
@@ -378,8 +392,10 @@ if [ "$command" = deployment-apply ]; then
   expected_ack=$(jq -r '.acknowledgement.digest // empty' <<<"$snapshot")
   expected_token=$(jq -r '.acknowledgement.token // empty' <<<"$snapshot")
   [ -n "$expected_ack" ] || refuse "snapshot has no immutable acknowledgement digest"
-  actual_plan_digest=$(jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' <<<"$snapshot" | sha256sum | cut -d' ' -f1)
-  [ "$actual_plan_digest" = "$expected_ack" ] || refuse "immutable acknowledgement digest is inconsistent with the plan and snapshot"
+  plan_json=$(jq -cS '{snapshotDigest, phases: .plan.phases, risks: (.plan.risks // []), backend: .plan.backend}' <<<"$snapshot")
+  actual_plan_digest=$(printf %s "$plan_json" | sha256sum | cut -d' ' -f1)
+  legacy_plan_digest=$(printf '%s\n' "$plan_json" | sha256sum | cut -d' ' -f1)
+  [ "$actual_plan_digest" = "$expected_ack" ] || [ "$legacy_plan_digest" = "$expected_ack" ] || refuse "immutable acknowledgement digest is inconsistent with the plan and snapshot"
   if [ "$acknowledgement" != "$expected_ack" ] && [ "$acknowledgement" != "$expected_token" ]; then
     refuse "acknowledgement does not match the immutable plan and snapshot (expected digest $expected_ack)"
   fi
