@@ -24,6 +24,12 @@
             pkgs.jq
             pkgs.socat
             pkgs.util-linux
+            pkgs.python3
+            (pkgs.writeScriptBin "arbor-manager-tui" (
+              builtins.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${pkgs.python3}/bin/python3" ] (
+                builtins.readFile ./bin/arbor-manager-tui
+              )
+            ))
           ];
           text = builtins.readFile ./bin/arbor-manager;
         };
@@ -51,6 +57,26 @@
       });
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt-tree);
       checks = forAllSystems (system: {
+        tui =
+          let
+            pkgs = import nixpkgs { inherit system; };
+            cli = mkCli system;
+            realSnapshot = pkgs.writeText "deployment.json" (
+              snapshot.exportDeployment {
+                plan = managerLib.plan {
+                  nodes = {
+                    edge = { };
+                  };
+                  roots = [ "edge" ];
+                };
+              }
+            );
+          in
+          pkgs.runCommand "arbor-manager-tui-check" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+            ${cli}/bin/arbor-manager nodes list --snapshot ${realSnapshot} --format names | grep -qx edge
+            REAL_SNAPSHOT=${realSnapshot} ARBOR_MANAGER_CLI=${cli}/bin/arbor-manager python3 ${./tests/tui.py}
+            touch "$out"
+          '';
         cli =
           let
             pkgs = import nixpkgs { inherit system; };

@@ -161,3 +161,25 @@ plan = lib.plan {
   batchSize = 2;
 };
 ```
+
+### Terminal interface
+
+Run `nix run .#arbor-manager -- tui --snapshot deployment.json` for a
+read-only terminal view. Optionally add `--socket /path/to/network.sock` to
+show accepted and observed endpoint counts from Arbor Network Manager. Use Tab
+to switch pages, j/k or arrows to select a node, Enter to inspect, `/` to
+filter, Esc to return, `r` to refresh, and `q` to quit. A terminal is required.
+
+The snapshot is validated by the existing CLI on every refresh. Node details
+are a deliberately limited view of machine inspection, not a live Registry
+query: provenance does not establish acceptance. Network counts distinguish
+accepted records from observations and do not imply reachability. Deployment
+plans are read-only; use the CLI to inspect risks and acknowledgements.
+
+Add `--registry-projection projection.json` to browse record IDs, known schema
+names, and generations from a JSON serialization of the Registry runtime's
+`Runtime.projection()` mapping. For example, from a trusted local Registry Python
+environment, serialize an already-open runtime with
+`json.dump(runtime.projection(), output_file)`. The file is operator-supplied
+and is not authenticated by this interface; `r` rereads it; payloads are not
+displayed. It must not be interpreted as current accepted state.

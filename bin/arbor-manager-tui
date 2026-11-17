@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""Read-only terminal interface for the arbor-manager CLI."""
+import argparse
+import curses
+import json
+import os
+import re
+import subprocess
+import sys
+
+CLI = os.environ.get("ARBOR_MANAGER_CLI", "arbor-manager")
+SAFE = re.compile(r"^[A-Za-z0-9._:-]{1,80}$")
+
+
+def label(value):
+    return value if isinstance(value, str) and SAFE.fullmatch(value) else "<hidden>"
+
+
+def call(*args, content=None):
+    result = subprocess.run([CLI, *args], input=content, capture_output=True, text=True, timeout=15)
+    if result.returncode:
+        raise ValueError("Manager could not read this data; check the input and CLI diagnostics.")
+    try:
+        return json.loads(result.stdout)
+    except ValueError as exc:
+        raise ValueError("Manager returned invalid data.") from exc
+
+
+class Model:
+    def __init__(self, snapshot, socket=None, registry=None):
+        self.snapshot, self.socket, self.registry = snapshot, socket, registry
+        self.page, self.index, self.query, self.detail = "Overview", 0, "", None
+        self.refresh()
+
+    def refresh(self):
+        # Pin the exact bytes for all inspections until the next refresh.
+        with open(self.snapshot, encoding="utf-8") as source:
+            content = source.read()
+        data = call("deployment-plan", "--snapshot", "/dev/stdin", content=content)
+        snapshot = data["snapshot"]
+        nodes = snapshot["nodes"]
+        plan = data.get("plan") or {}
+        if not isinstance(plan, dict):
+            raise ValueError("Invalid plan")
+        phases = plan.get("phases") or []
+        if not isinstance(nodes, dict) or not isinstance(phases, list):
+            raise ValueError("Invalid snapshot structure")
+        if any(not isinstance(p, dict) or not isinstance(p.get("names", []), list) for p in phases):
+            raise ValueError("Invalid plan structure")
+        selected, excluded = snapshot.get("selected", []), snapshot.get("excluded", [])
+        if not isinstance(selected, list) or not isinstance(excluded, list):
+            raise ValueError("Invalid selection")
+        names = list(nodes)
+        network, network_error = None, False
+        if self.socket:
+            try:
+                endpoints = call("network", "endpoints", "--socket", self.socket)
+                accepted, observed = endpoints.get("accepted", []), endpoints.get("observed", [])
+                if not isinstance(accepted, list) or not isinstance(observed, list):
+                    raise ValueError("Invalid network data")
+                network = (len(accepted), len(observed))
+            except (ValueError, OSError, subprocess.TimeoutExpired, TypeError, AttributeError):
+                network_error = True
+        registry_records = None
+        if self.registry:
+            with open(self.registry, encoding="utf-8") as source:
+                projection = json.load(source)
+            if not isinstance(projection, dict) or any(not isinstance(v, dict) for v in projection.values()):
+                raise ValueError("Invalid Registry projection")
+            schemas = {"node-identity", "identity-generation", "relationship", "capability", "service", "endpoint", "enrollment", "revocation", "recovery-authorization", "receipt"}
+            registry_records = [(label(k), v.get("schema") if isinstance(v.get("schema"), str) and v.get("schema") in schemas else "unknown", v.get("generation") if type(v.get("generation")) is int and 0 <= v["generation"] <= 999999999 else "?") for k, v in projection.items()]
+        self.pinned, self.projection = content, registry_records
+        self.names = [n for n in names if label(n) != "<hidden>"]
+        self.hidden = len(names) - len(self.names)
+        self.selected, self.excluded = len(selected), len(excluded)
+        self.phases = phases
+        self.backend = plan.get("backend") if plan.get("backend") in ("direct", "colmena") else "unknown"
+        self.network, self.network_error = network, network_error
+        if self.page == "Detail":
+            self.page = "Nodes"
+        self.index = min(self.index, max(0, len(self.filtered()) - 1))
+
+    def filtered(self):
+        return [n for n in self.names if self.query.lower() in n.lower()]
+
+    def open_node(self):
+        names = self.filtered()
+        if names:
+            name = names[self.index]
+            data = call("machine", "inspect", "--snapshot", "/dev/stdin", "--name", name, content=self.pinned)
+            record = data.get("record", {})
+            if not isinstance(record, dict):
+                raise ValueError("Invalid record")
+            source = data.get("provenance", {}).get("source", {})
+            if isinstance(source, dict) and isinstance(source.get("source"), dict):
+                source = source["source"]
+            kind = source.get("kind") if isinstance(source, dict) else None
+            self.detail = (name, record, kind if kind in ("snapshot", "registry-snapshot", "source-merge") else "unspecified")
+            self.page = "Detail"
+
+    def lines(self):
+        if self.page == "Overview":
+            return ["SNAPSHOT OVERVIEW", "", f"Nodes             {len(self.names)} visible   {self.hidden} hidden", f"Selected          {self.selected}", f"Excluded          {self.excluded}", "", "Registry          Provenance in snapshot; live acceptance unavailable", "Network           " + ("endpoint data available" if self.network else "not connected"), f"Deployment plan   {len(self.phases)} phases", "", "Snapshot data is not live health or proof of accepted Registry state.", "Open Nodes to inspect records; use Tab to change section."]
+        if self.page == "Nodes":
+            names = self.filtered()
+            return [f"NODES  /{self.query}", "", *[(" > " if i == self.index else "   ") + n for i, n in enumerate(names)], "" if names else "   No matching visible nodes"]
+        if self.page == "Detail":
+            name, record, kind = self.detail
+            lines = [f"NODE  {name}", "", "SNAPSHOT RECORD"]
+            for key in ("system", "state", "hostname", "targetHost", "targetUser", "targetPort"):
+                if key in record:
+                    value = record[key]
+                    lines.append(f"  {key:<16} {value if isinstance(value, int) and not isinstance(value, bool) else label(value)}")
+            for key in ("parents", "children"):
+                value = record.get(key)
+                if isinstance(value, list):
+                    lines.append(f"  {key:<16} " + ", ".join(label(v) for v in value))
+            lines += ["", "PROVENANCE", f"  Source kind: {kind} (snapshot inspection)", "  Provenance is not evidence of accepted Registry state.", "", "Esc returns to Nodes."]
+            return lines
+        if self.page == "Registry":
+            if self.projection is None:
+                return ["REGISTRY PROJECTION", "", "No projection supplied. Use --registry-projection FILE."]
+            return ["REGISTRY PROJECTION", "", "Supplied projection; not independently verified or live.", "Record ID  /  schema  /  generation", "", *[f"  {name}  /  {schema}  /  {generation}" for name, schema, generation in self.projection], "", "Payloads are not displayed."]
+        if self.page == "Network":
+            lines = ["NETWORK", ""]
+            if self.network is not None:
+                lines += [f"Accepted endpoint records    {self.network[0]}", f"Observed endpoint records    {self.network[1]}", "", "Acceptance and transport observation are independent.", "Counts do not establish reachability or route selection."]
+            elif self.network_error:
+                lines += ["Network daemon data unavailable. Check the socket and daemon."]
+            else:
+                lines += ["No network socket supplied.", "Start with --socket FILE to read network endpoint counts."]
+            return lines
+        return ["DEPLOYMENT PLAN", "", f"Backend   {self.backend}", f"Phases    {len(self.phases)}", "", *[f"  Phase {i + 1}  ({len(p.get('names', []))} entries)" for i, p in enumerate(self.phases) if isinstance(p, dict)], "", "Read-only snapshot plan. No deployment is performed.", "Use the CLI to inspect risks and acknowledgements before acting."]
+
+
+def run(screen, model):
+    curses.curs_set(0)
+    screen.keypad(True)
+    pages = ["Overview", "Nodes", "Registry", "Network", "Plan"]
+    error = ""
+    scroll = 0
+    while True:
+        screen.erase()
+        h, w = screen.getmaxyx()
+        def put(y, text, attr=0):
+            if 0 <= y < h and w > 1:
+                try:
+                    screen.addnstr(y, 0, text, w - 1, attr)
+                except curses.error:
+                    pass
+        put(0, " ARBOR MANAGER  /  READ ONLY", curses.A_BOLD)
+        put(1, "  ".join(("[" + p + "]") if p == model.page or (p == "Nodes" and model.page == "Detail") else p for p in pages))
+        lines = model.lines()
+        offset = max(0, model.index - max(0, h - 8)) if model.page == "Nodes" else 0
+        if offset:
+            lines = lines[:2] + lines[2 + offset:]
+        elif model.page != "Nodes":
+            scroll = min(scroll, max(0, len(lines) - max(1, h - 5)))
+            lines = lines[scroll:]
+        for y, line in enumerate(lines[:max(0, h - 5)], 3):
+            put(y, line)
+        put(h - 2, error)
+        put(h - 1, "Tab sections  j/k move  Enter open  / filter  r refresh  Esc back  q quit")
+        screen.refresh()
+        key = screen.getch()
+        error = ""
+        try:
+            if key in (ord("q"),):
+                break
+            if key in (9, curses.KEY_BTAB):
+                current = "Nodes" if model.page == "Detail" else model.page
+                model.page = pages[(pages.index(current) + (-1 if key == curses.KEY_BTAB else 1)) % len(pages)]
+                scroll = 0
+            elif key == 27 and model.page == "Detail":
+                model.page = "Nodes"
+                scroll = 0
+            elif key in (ord("j"), curses.KEY_DOWN) and model.page != "Nodes":
+                scroll = min(scroll + 1, max(0, len(model.lines()) - max(1, h - 5)))
+            elif key in (ord("k"), curses.KEY_UP) and model.page != "Nodes":
+                scroll = max(0, scroll - 1)
+            elif key in (ord("j"), curses.KEY_DOWN) and model.page == "Nodes":
+                model.index = min(model.index + 1, max(0, len(model.filtered()) - 1))
+            elif key in (ord("k"), curses.KEY_UP) and model.page == "Nodes":
+                model.index = max(0, model.index - 1)
+            elif key in (10, 13, curses.KEY_ENTER) and model.page == "Nodes":
+                model.open_node()
+            elif key == ord("/") and model.page == "Nodes":
+                curses.echo()
+                put(h - 2, "Filter: ")
+                try:
+                    model.query = screen.getstr(h - 2, 8, max(1, min(80, w - 9))).decode("utf-8", "replace") if w > 9 else ""
+                finally:
+                    curses.noecho()
+                model.index = 0
+            elif key == ord("r"):
+                model.refresh()
+                scroll = 0
+        except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, TypeError, AttributeError):
+            error = "Unable to read data. Check the CLI and input, then refresh."
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Read-only Arbor Manager terminal interface")
+    parser.add_argument("--snapshot", required=True)
+    parser.add_argument("--socket", help="optional Arbor Network Manager socket")
+    parser.add_argument("--registry-projection", help="JSON from Registry Runtime.projection()")
+    args = parser.parse_args()
+    try:
+        model = Model(args.snapshot, args.socket, args.registry_projection)
+        curses.wrapper(run, model)
+    except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, TypeError, AttributeError, curses.error):
+        print("arbor-manager tui: unable to start; check snapshot, terminal and CLI", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
