@@ -53,7 +53,7 @@ def terminal(directory, *args, width=110):
         yield expect
         os.write(master, b"q")
         assert process.wait(timeout=8) == 0
-        assert b"do-not-display" not in output
+        assert all(token not in output for token in (b"do-not-display", b"private/id", b"private id"))
     finally:
         if process.poll() is None:
             process.kill()
@@ -102,6 +102,10 @@ def main():
             "from": "relay", "to": "api", "kind": "parent", "status": "standby", "secret": "do-not-display"}},
                       "p2": {"schema": "relationship", "payload": {"from": "other", "to": "api", "status": "active"}},
                       "isolated": {"schema": "node-identity", "payload": {"identity": "offline"}}}
+        # Distinct projection records can share endpoints and a redacted display ID.
+        edge = {"schema": "relationship", "payload": {"from": "long-" + "z" * 85,
+                "to": "archive", "kind": "parent", "status": "severed"}}
+        projection.update({"private/id": edge, "private id": edge})
         registry = Path(tmp) / "registry.json"
         registry.write_text(json.dumps(projection))
         with terminal(tmp, "--snapshot", str(path), "--registry-projection", str(registry),
@@ -112,6 +116,8 @@ def main():
             show("FOCUS   api", keys=b"\x1b")
             show("Registry projection", "standby", "Peer", keys=b"s")
             show("FIND NODE", "offline", keys=b"/\n")
+            show("Filter: long-", "2 links", keys=b"/long-\n")
+            show("FOCUS   long-", "<hidden #4>", "<hidden #5>", keys=b"\n")
             show("ENDPOINT OBSERVATIONS", "No network socket", keys=b"e")
             show("NODE INVENTORY", keys=b"2")
             show("Filter: api", keys=b"/api\n")
