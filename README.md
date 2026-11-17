@@ -1,21 +1,55 @@
 # Arbor Manager
 
-![Animated tour of the Arbor Manager terminal interface using fictional data](res/demo.gif)
+Arbor Manager is the reusable assembly layer between a machine source and
+ordinary NixOS configurations. `mkMachines` consumes pure source entries, so
+callers can provide records from any source without adding a registry
+dependency.
 
-Try the read-only terminal interface with a fictional cluster:
+## Explore the terminal interface
+
+Start with a fictional cluster from a checkout of this repository.
 
 ```console
 nix run .#arbor-manager -- tui --demo
 ```
 
-Run this in a terminal from a checkout of this repository. No snapshot, Registry file, or
-network daemon is needed. Press Tab to switch sections, Enter to open a node,
-and q to quit. The demo label stays visible on every screen.
+Press `1`–`5` to jump to a tab, `j` or `k` to move the selection, and
+`Enter` to inspect it. Press `Esc` to go back and `q` to quit. To open a
+specific tab on startup, add `--tab network`, for example.
 
-Arbor Manager is the reusable assembly layer between a machine source and
-ordinary NixOS configurations. `mkMachines` consumes pure source entries, so
-callers can provide records from any source without adding a registry
-dependency.
+![Overview walkthrough showing how to open a section from the dashboard](res/demos/overview.gif)
+
+<details>
+<summary><strong>Nodes</strong> · Find a machine and inspect its snapshot record</summary>
+
+![Nodes walkthrough filtering the inventory to Cedar and opening its details](res/demos/nodes.gif)
+
+</details>
+
+<details>
+<summary><strong>Registry</strong> · Find a projected record and inspect its generation</summary>
+
+![Registry walkthrough inspecting a record and filtering the projection](res/demos/registry.gif)
+
+</details>
+
+<details open>
+<summary><strong>Network</strong> · Explore Cedar’s parents, child, and projected relationships</summary>
+
+![Network walkthrough focusing Cedar, comparing relationship sources, and following a peer to Spruce](res/demos/network.gif)
+
+</details>
+
+<details>
+<summary><strong>Plan</strong> · Inspect the canary and the next deployment batch</summary>
+
+![Plan walkthrough inspecting the canary stage and a subsequent rollout batch](res/demos/plan.gif)
+
+</details>
+
+[Reproduce these recordings](res/demos/README.md)
+
+## Assemble machines
 
 Its public API is `lib.mkMachines`:
 
@@ -176,22 +210,26 @@ plan = lib.plan {
 
 ### Terminal interface
 
-Run `nix run .#arbor-manager -- tui --snapshot deployment.json` for a
-read-only terminal view. Optionally add `--socket /path/to/network.sock` to
-show accepted and observed endpoint counts from Arbor Network Manager. Use Tab
-to switch pages, j/k or arrows to select a node, Enter to inspect, `/` to
-filter, Esc to return, `r` to refresh, and `q` to quit. A terminal is required.
+Run `nix run .#arbor-manager -- tui --snapshot deployment.json` in a terminal.
+The interface validates the snapshot on each refresh. Overview opens the other
+sections, Nodes shows snapshot records and their provenance, and Plan shows
+the membership of each rollout phase. Use the CLI for risk and acknowledgement
+details.
 
-The snapshot is validated by the existing CLI on every refresh. Node details
-are a deliberately limited view of machine inspection, not a live Registry
-query: provenance does not establish acceptance. Network counts distinguish
-accepted records from observations and do not imply reachability. Deployment
-plans are read-only; use the CLI to inspect risks and acknowledgements.
+In Network, choose a neighbour and press `Enter` to follow that relationship.
+Press `Esc` to retrace your path. The node directory (`n`) includes isolated
+nodes, and `/` finds a node by name. Wide terminals show a preview of the
+selected neighbour. From a machine’s detail page in Nodes, press `g` to open
+its network neighbourhood.
 
-Add `--registry-projection projection.json` to browse record IDs, known schema
-names, and generations from a JSON serialization of the Registry runtime's
-`Runtime.projection()` mapping. For example, from a trusted local Registry Python
-environment, serialize an already-open runtime with
-`json.dump(runtime.projection(), output_file)`. The file is operator-supplied
-and is not authenticated by this interface; `r` rereads it; payloads are not
-displayed. It must not be interpreted as current accepted state.
+Add `--registry-projection projection.json` to browse a local export of
+`Runtime.projection()` and compare its relationships with the snapshot using
+`s` in Network. From a trusted local Registry Python environment, serialize an
+already-open runtime with `json.dump(runtime.projection(), output_file)`.
+Registry shows record IDs, schemas, generations, and selected identity or
+relationship fields. The operator supplies this export and is responsible
+for verifying its origin and freshness. Press `r` to reread the inputs.
+
+Add `--socket /path/to/network.sock` and press `e` in Network to see separate
+counts of accepted and observed endpoint records. Reachability and active
+route selection require other evidence.
