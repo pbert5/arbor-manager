@@ -2,6 +2,7 @@
 """Read-only terminal interface for the arbor-manager CLI."""
 import argparse
 import curses
+import hashlib
 import json
 import os
 import re
@@ -26,16 +27,41 @@ def call(*args, content=None):
         raise ValueError("Manager returned invalid data.") from exc
 
 
+def demo_data():
+    """A fictional cluster, encoded with the same digest convention as exports."""
+    snapshot = {
+        "nodes": {
+            "atlas": {"system": "x86_64-linux", "state": "active", "hostname": "atlas.example", "children": ["cedar", "spruce"], "provenance": {"kind": "registry-snapshot"}},
+            "cedar": {"system": "aarch64-linux", "state": "active", "hostname": "cedar.example", "parents": ["atlas"], "provenance": {"kind": "registry-snapshot"}},
+            "spruce": {"system": "x86_64-linux", "state": "active", "hostname": "spruce.example", "parents": ["atlas"]},
+        },
+        "roots": ["atlas"], "selected": ["atlas", "cedar", "spruce"], "excluded": [],
+    }
+    def digest(value):
+        return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    document = {"format": "arbor-manager/deployment-snapshot", "version": 1,
+                "snapshot": snapshot, "snapshotDigest": digest(snapshot),
+                "plan": {"backend": "direct", "phases": [{"name": "root", "names": ["atlas"]}, {"name": "leaves", "names": ["cedar", "spruce"]}]}}
+    document["digest"] = digest(document)
+    projection = {"atlas-identity": {"schema": "node-identity", "generation": 2},
+                  "cedar-link": {"schema": "relationship", "generation": 1},
+                  "spruce-ssh": {"schema": "endpoint", "generation": 3}}
+    return json.dumps(document), projection
+
+
 class Model:
-    def __init__(self, snapshot, socket=None, registry=None):
-        self.snapshot, self.socket, self.registry = snapshot, socket, registry
+    def __init__(self, snapshot, socket=None, registry=None, demo=False):
+        self.snapshot, self.socket, self.registry, self.demo = snapshot, socket, registry, demo
         self.page, self.index, self.query, self.detail = "Overview", 0, "", None
         self.refresh()
 
     def refresh(self):
         # Pin the exact bytes for all inspections until the next refresh.
-        with open(self.snapshot, encoding="utf-8") as source:
-            content = source.read()
+        if self.demo:
+            content, demo_projection = demo_data()
+        else:
+            with open(self.snapshot, encoding="utf-8") as source:
+                content = source.read()
         data = call("deployment-plan", "--snapshot", "/dev/stdin", content=content)
         snapshot = data["snapshot"]
         nodes = snapshot["nodes"]
@@ -62,9 +88,12 @@ class Model:
             except (ValueError, OSError, subprocess.TimeoutExpired, TypeError, AttributeError):
                 network_error = True
         registry_records = None
-        if self.registry:
-            with open(self.registry, encoding="utf-8") as source:
-                projection = json.load(source)
+        if self.demo or self.registry:
+            if self.demo:
+                projection = demo_projection
+            else:
+                with open(self.registry, encoding="utf-8") as source:
+                    projection = json.load(source)
             if not isinstance(projection, dict) or any(not isinstance(v, dict) for v in projection.values()):
                 raise ValueError("Invalid Registry projection")
             schemas = {"node-identity", "identity-generation", "relationship", "capability", "service", "endpoint", "enrollment", "revocation", "recovery-authorization", "receipt"}
@@ -148,7 +177,7 @@ def run(screen, model):
                     screen.addnstr(y, 0, text, w - 1, attr)
                 except curses.error:
                     pass
-        put(0, " ARBOR MANAGER  /  READ ONLY", curses.A_BOLD)
+        put(0, " ARBOR MANAGER  /  READ ONLY" + ("  /  DEMO: FICTIONAL DATA" if model.demo else ""), curses.A_BOLD)
         put(1, "  ".join(("[" + p + "]") if p == model.page or (p == "Nodes" and model.page == "Detail") else p for p in pages))
         lines = model.lines()
         offset = max(0, model.index - max(0, h - 8)) if model.page == "Nodes" else 0
@@ -200,13 +229,17 @@ def run(screen, model):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Read-only Arbor Manager terminal interface")
-    parser.add_argument("--snapshot", required=True)
+    parser = argparse.ArgumentParser(prog="arbor-manager tui", description="Read-only Arbor Manager terminal interface")
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--snapshot")
+    inputs.add_argument("--demo", action="store_true", help="browse a fictional cluster without external inputs")
     parser.add_argument("--socket", help="optional Arbor Network Manager socket")
     parser.add_argument("--registry-projection", help="JSON from Registry Runtime.projection()")
     args = parser.parse_args()
+    if args.demo and (args.socket or args.registry_projection):
+        parser.error("--demo cannot be combined with --socket or --registry-projection")
     try:
-        model = Model(args.snapshot, args.socket, args.registry_projection)
+        model = Model(args.snapshot, args.socket, args.registry_projection, args.demo)
         curses.wrapper(run, model)
     except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, TypeError, AttributeError, curses.error):
         print("arbor-manager tui: unable to start; check snapshot, terminal and CLI", file=sys.stderr)

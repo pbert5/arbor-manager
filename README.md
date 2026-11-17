@@ -1,5 +1,17 @@
 # Arbor Manager
 
+![Animated tour of the Arbor Manager terminal interface using fictional data](res/demo.gif)
+
+Try the read-only terminal interface with a fictional cluster:
+
+```console
+nix run .#arbor-manager -- tui --demo
+```
+
+Run this in a terminal from a checkout of this repository. No snapshot, Registry file, or
+network daemon is needed. Press Tab to switch sections, Enter to open a node,
+and q to quit. The demo label stays visible on every screen.
+
 Arbor Manager is the reusable assembly layer between a machine source and
 ordinary NixOS configurations. `mkMachines` consumes pure source entries, so
 callers can provide records from any source without adding a registry

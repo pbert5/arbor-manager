@@ -28,6 +28,28 @@ def read_until(fd, needle):
 
 
 def main():
+    with tempfile.TemporaryDirectory() as empty:
+        master, slave = pty.openpty()
+        process = subprocess.Popen([os.environ.get('ARBOR_MANAGER_CLI', 'arbor-manager'), 'tui', '--demo'], cwd=empty, stdin=slave, stdout=slave, stderr=slave, env={**os.environ, 'TERM': 'xterm'})
+        os.close(slave)
+        try:
+            assert b'FICTIONAL DATA' in read_until(master, b'SNAPSHOT OVERVIEW')
+            os.write(master, b'\t')
+            read_until(master, b'atlas')
+            os.write(master, b'\n')
+            read_until(master, b'atlas.example')
+            os.write(master, b'\t')
+            read_until(master, b'atlas-identity')
+            os.write(master, b'\t\t')
+            read_until(master, b'DEPLOYMENT PLAN')
+            os.write(master, b'rq')
+            assert process.wait(timeout=10) == 0
+            assert not os.listdir(empty)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            os.close(master)
     if os.environ.get('REAL_SNAPSHOT'):
         master, slave = pty.openpty()
         process = subprocess.Popen([os.environ['ARBOR_MANAGER_CLI'], 'tui', '--snapshot', os.environ['REAL_SNAPSHOT']], stdin=slave, stdout=slave, stderr=slave, env={**os.environ, 'TERM': 'xterm'})

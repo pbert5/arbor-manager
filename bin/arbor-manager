@@ -5,6 +5,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
+  arbor-manager tui --demo
   arbor-manager tui --snapshot FILE [--socket FILE] [--registry-projection FILE]
   arbor-manager network status|providers|endpoints|snapshot --socket FILE [--format json|text]
   arbor-manager route --socket FILE --source NODE --target NODE [--capability CAPABILITY]
