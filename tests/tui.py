@@ -51,7 +51,7 @@ def terminal(directory, *args, width=110):
 
     try:
         yield expect
-        os.write(master, b"q")
+        os.write(master, b"q\n" if "--admin" in args else b"q")
         assert process.wait(timeout=8) == 0
         assert all(token not in output for token in (b"do-not-display", b"private/id", b"private id"))
     finally:
@@ -83,6 +83,38 @@ def main():
             show("PHASE MEMBERS", "Batch 2", "moss", keys=b"j\n")
             show("DEPLOYMENT PLAN", keys=b"r")
         assert not os.listdir(tmp)
+
+        with terminal(tmp, "--admin", "--demo") as show:
+            show("ISOLATED DEMO")
+            show("Cancelled.", keys=b":cancel\n")
+            show("No local genesis reported", keys=b"1\n")
+            show("Initialized identity: cedar", keys=b"2\n\n\nAPPLY\n")
+            show("Local signer ready: True", keys=b"7\n\nauthority\n")
+            show("Transfer the public request", keys=b"3\n\n\n\nAPPLY\n")
+            show("Transfer the public approval", keys=b"4\n\n\nAPPLY\n")
+            show("Registry accepted enrollment for fern", keys=b"5\nAPPLY\n")
+            show("Verified session override: fern = standby", keys=b"6\nfern\nstandby\nfern\nAPPLY\n")
+        assert not os.listdir(tmp)
+
+        override = Path(tmp) / "overrides.json"
+        def update(contents, commands):
+            override.write_text(contents)
+            override.chmod(0o640)
+            result = subprocess.run([CLI, "tui", "--admin", "--overrides", str(override)],
+                                    input=commands + "q\n", text=True, capture_output=True, check=True)
+            assert "Traceback" not in result.stderr
+            assert override.stat().st_mode & 0o777 == 0o640
+            return override.read_text()
+
+        for invalid in ('{"format":"arbor-manager/deployment-snapshot"}',
+                        '{"fern":{"state":"active","state":"standby"}}',
+                        '{"rec":{"schema":"node-identity","payload":{},"signature":"fake"}}'):
+            assert update(invalid, "6\nfern\nsuspended\n") == invalid
+        original = '{"fern":{"state":"standby","metadata":{"site":"one"}},"other":{}}'
+        assert update(original, "6\nfern\nsuspended\n:cancel\n") == original
+        changed = json.loads(update(original, "6\nfern\nsuspended\nAPPLY\n"))
+        assert changed == {"fern":{"state":"suspended","metadata":{"site":"one"}}, "other":{}}
+        override.unlink()
 
         if os.environ.get("REAL_SNAPSHOT"):
             with terminal(tmp, "--snapshot", os.environ["REAL_SNAPSHOT"], "--tab", "network") as show:

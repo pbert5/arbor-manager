@@ -25,6 +25,11 @@
             pkgs.socat
             pkgs.util-linux
             pkgs.python3
+            (pkgs.writeScriptBin "arbor-manager-admin" (
+              builtins.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${pkgs.python3}/bin/python3" ] (
+                builtins.readFile ./bin/arbor-manager-admin
+              )
+            ))
             (pkgs.writeScriptBin "arbor-manager-tui" (
               builtins.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${pkgs.python3}/bin/python3" ] (
                 builtins.readFile ./bin/arbor-manager-tui
